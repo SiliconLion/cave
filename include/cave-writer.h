@@ -33,10 +33,10 @@ void cave_STL_Data_release(cave_STL_Data* data);
 //`dest` is the location to write the outcome into. `bytes` is the buffer of bytes to parse.
 //`bytes_len` is the number of bytes in `bytes`.
 //If any error is returned, `*dest` is not valid, but `cave_STL_Data_release(*data)` need not be called.
-//Returns `DATA_ERROR` if `bytes` describes a malformed STL file,
+//Returns `CAVE_DATA_ERROR` if `bytes` describes a malformed STL file,
 //or `bytes_len` isn't exactly the number of bytes of the binary STL file.
 //If `dest->tri_count == 0`, then `dest->tris` will be `NULL`.
-CAVE_ERROR cave_bytes_to_STL_Data(cave_STL_Data* dest, uint8_t* bytes, size_t bytes_len);
+CaveError cave_bytes_to_STL_Data(cave_STL_Data* dest, uint8_t* bytes, size_t bytes_len);
 
 //returns the number of bytes would be needed to write `*data` as an STL binary file.
 //returns 0 if `data == NULL`. Otherwise, `*data` is assumed to be well-formed and valid.
@@ -45,7 +45,7 @@ size_t cave_Sizeof_STL_Data(cave_STL_Data* data);
 //writes `src` to `*dest` following the STL binary file format.
 // If `dest == NULL`, then the right number of bytes will be malloc'ed. Otherwise, it is
 //assumed `*dest` can properly have the appropriate number of bytes written to it.
-CAVE_ERROR cave_STL_Data_to_Bytes(uint8_t** dest, cave_STL_Data* src);
+CaveError cave_STL_Data_to_Bytes(uint8_t** dest, cave_STL_Data* src);
 
 
 

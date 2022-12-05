@@ -9,16 +9,16 @@
 extern "C" {
 #endif
 
-typedef enum CAVE_ERROR {
-    NO_ERROR = 0,
-    FILE_ERROR,
-    DATA_ERROR,
-//    FORMAT_ERROR,
-    INSUFFICENT_MEMORY_ERROR,
-    UNKNOWN_ERROR,
-} CAVE_ERROR;
+typedef enum CaveError {
+    CAVE_NO_ERROR = 0,
+    CAVE_FILE_ERROR,
+    CAVE_DATA_ERROR,
+//  CAVE_FORMAT_ERROR,
+    CAVE_INSUFFICIENT_MEMORY_ERROR,
+    CAVE_UNKNOWN_ERROR,
+} CaveError;
 
-const char* cave_error_string(CAVE_ERROR e);
+const char* cave_error_string(CaveError e);
 
 #ifdef __cplusplus
 }

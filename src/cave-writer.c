@@ -22,9 +22,9 @@ void cave_STL_Data_release(cave_STL_Data* data) {
     free(data->tris);
 }
 
-CAVE_ERROR cave_bytes_to_STL_Data(cave_STL_Data* dest, uint8_t* bytes, size_t bytes_len) {
+CaveError cave_bytes_to_STL_Data(cave_STL_Data* dest, uint8_t* bytes, size_t bytes_len) {
     if(bytes_len < 84 | (bytes_len - 84) % 50 != 0) {
-        return DATA_ERROR;
+        return CAVE_DATA_ERROR;
     }
     //the first 80 bytes of an STL file is a header filled with whatever the file creator wants
     memcpy( &(dest->header), bytes, 80);
@@ -35,17 +35,17 @@ CAVE_ERROR cave_bytes_to_STL_Data(cave_STL_Data* dest, uint8_t* bytes, size_t by
     // integer division ignores remainder, but we already know `(bytes_len - 84) % 50 == 0`, so the
     //following checks are sufficent.
     if(dest->tri_count != (bytes_len - 84) / 50 ) {
-        return DATA_ERROR;
+        return CAVE_DATA_ERROR;
     }
 
     if(dest->tri_count == 0) {
         dest->tris = NULL;
-        return NO_ERROR;
+        return CAVE_NO_ERROR;
     }
 
     dest->tris = malloc(sizeof(cave_STL_Tri) * dest->tri_count);
     if(!dest->tris) {
-        return INSUFFICENT_MEMORY_ERROR;
+        return CAVE_INSUFFICIENT_MEMORY_ERROR;
     }
 
     uint8_t* triangle_start = bytes + 84;
@@ -61,7 +61,7 @@ CAVE_ERROR cave_bytes_to_STL_Data(cave_STL_Data* dest, uint8_t* bytes, size_t by
         memcpy( &curr_tri->attribute, curr_pos + 48, 2);
     }
 
-    return NO_ERROR;
+    return CAVE_NO_ERROR;
 }
 
 size_t cave_Sizeof_STL_Data(cave_STL_Data* data) {
@@ -69,16 +69,16 @@ size_t cave_Sizeof_STL_Data(cave_STL_Data* data) {
     return 84 + (data->tri_count * 50);
 }
 
-CAVE_ERROR cave_STL_Data_to_Bytes(uint8_t** dest, cave_STL_Data* src) {
+CaveError cave_STL_Data_to_Bytes(uint8_t** dest, cave_STL_Data* src) {
     if(!src) {
-        return DATA_ERROR;
+        return CAVE_DATA_ERROR;
     }
     if(!dest) {
-        return DATA_ERROR;
+        return CAVE_DATA_ERROR;
     } else if(!*dest) {
         *dest = malloc(cave_Sizeof_STL_Data(src));
         if(!*dest) {
-            return INSUFFICENT_MEMORY_ERROR;
+            return CAVE_INSUFFICIENT_MEMORY_ERROR;
         }
     }
 
@@ -96,5 +96,5 @@ CAVE_ERROR cave_STL_Data_to_Bytes(uint8_t** dest, cave_STL_Data* src) {
         memcpy(curr_pos + 48, &curr_tri->attribute, 2);
     }
 
-    return NO_ERROR;
+    return CAVE_NO_ERROR;
 }

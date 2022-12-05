@@ -1,21 +1,21 @@
 #include "cave-error.h"
 
-const char* cave_error_string(CAVE_ERROR e) {
+const char* cave_error_string(CaveError e) {
     switch (e) {
-        case NO_ERROR: {
-            return "NO_ERROR";
+        case CAVE_NO_ERROR: {
+            return "CAVE_NO_ERROR";
         }
-        case FILE_ERROR: {
-            return "FILE_ERROR";
+        case CAVE_FILE_ERROR: {
+            return "CAVE_FILE_ERROR";
         }
-        case DATA_ERROR: {
-            return "DATA_ERROR";
+        case CAVE_DATA_ERROR: {
+            return "CAVE_DATA_ERROR";
         }
-        case INSUFFICENT_MEMORY_ERROR: {
-            return "INSUFFICENT_MEMORY_ERROR";
+        case CAVE_INSUFFICIENT_MEMORY_ERROR: {
+            return "CAVE_INSUFFICIENT_MEMORY_ERROR";
         }
-        case UNKNOWN_ERROR: {
-            return "UNKNOWN_ERROR";
+        case CAVE_UNKNOWN_ERROR: {
+            return "CAVE_UNKNOWN_ERROR";
         }
         default: {
             return "value is not a valid error";
