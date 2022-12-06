@@ -5,11 +5,12 @@ These libraries are currently mostly related to computer graphics.
 Over time I may work to make these libraries more compatible with code that needs
 full control over when and where memory is allocated. For now, malloc is called when I want. 
 
-## Libraries Provided 
+## Libraries Provided
 - PolyTri : PolyTri is a library for dividing polygons into triangles.
 - CaveWriter : A library for reading and writing 3D file formats. 
 Works both with Cave types and user defined types (coming soon).
-Currently only supports binary STL files, but OBJ will be added, and perhaps more in the future.
+Currently, only supports binary STL files, but OBJ coming soon, and perhaps more in the future.
+- Bedrock: Foundational data-structures for the rest of Cave.
 
 ## Building and Using Cave
 The build story here is currently pretty rudimentary and somewhat manual, though I intend to 
