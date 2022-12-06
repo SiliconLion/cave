@@ -1,7 +1,7 @@
 //
 // Created by David Sullivan on 11/17/22.
 //
-
+#include "test-utilities.h"
 #include "cave-writer.h"
 #include "cave-utilities.h"
 #include <stdio.h>
@@ -29,9 +29,9 @@ int read_and_write_STL() {
     }
 
     cave_STL_Data teapot_data;
-    CAVE_ERROR err;
+    CaveError err;
     err = cave_bytes_to_STL_Data(&teapot_data, file_contents, file_len);
-    if(err != NO_ERROR) {
+    if(err != CAVE_NO_ERROR) {
         printf("Error reading stl file: %s\n", cave_error_string(err));
         return -1;
     }
@@ -63,7 +63,7 @@ int read_and_write_STL() {
 
     uint8_t* written_bytes = NULL;
     err = cave_STL_Data_to_Bytes(&written_bytes, &teapot_data);
-    if(err != NO_ERROR) {
+    if(err != CAVE_NO_ERROR) {
         printf("function `cave_STL_Data_to_Bytes(...)` returns %s when "
                "`*dest` argument was NULL.\n", cave_error_string(err));
         return -1;
@@ -72,7 +72,7 @@ int read_and_write_STL() {
 
     uint8_t* written_bytes_prealloced = malloc(cave_Sizeof_STL_Data(&teapot_data));
     err = cave_STL_Data_to_Bytes(&written_bytes_prealloced, &teapot_data);
-    if(err != NO_ERROR) {
+    if(err != CAVE_NO_ERROR) {
         printf("function `cave_STL_Data_to_Bytes(...)` returns %s when "
                "`*dest` argument was preallocated.\n", cave_error_string(err));
         return -1;
@@ -89,11 +89,12 @@ int read_and_write_STL() {
 
 int main(int argc, char* argv[]) {
     int test_fails = 0;
-    if(0 == read_and_write_STL()) {
-        printf("`read_and_write_STL()` passed.\n");
-    } else {
-        printf("`read_and_write_STL()` failed.\n");
-        test_fails += 1;
-    }
+//    if(0 == read_and_write_STL()) {
+//        printf("`read_and_write_STL()` passed.\n");
+//    } else {
+//        printf("`read_and_write_STL()` failed.\n");
+//        test_fails += 1;
+//    }
+    RUN_TEST(read_and_write_STL, test_fails);
     return test_fails;
 }
