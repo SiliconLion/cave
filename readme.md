@@ -6,7 +6,7 @@ Over time I may work to make these libraries more compatible with code that need
 full control over when and where memory is allocated. For now, malloc is called when I want. 
 
 ## Libraries Provided
-- PolyTri : PolyTri is a library for dividing polygons into triangles.
+- Geode : A library for managing polygons and related algorithms, such as dividing a polygon into triangles.
 - CaveWriter : A library for reading and writing 3D file formats. 
 Works both with Cave types and user defined types (coming soon).
 Currently, only supports binary STL files, but OBJ coming soon, and perhaps more in the future.

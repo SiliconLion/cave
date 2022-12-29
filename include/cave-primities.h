@@ -69,8 +69,6 @@ typedef struct cave_Index_Triangle {
 
 
 
-
-
 #ifdef __cplusplus
 }
 #endif
