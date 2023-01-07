@@ -15,7 +15,7 @@
 /// a vector data-structure, but at least a hashmap implementation will be added,
 /// and whatever other foundational data-structures other Cave libraries will need.
 ///
-/// NOTE: The majority of functions here accept NULL arguments in most of their paramaters
+/// NOTE: The majority of functions here accept NULL arguments in most of their paramaters.
 /// However, in none  of the following functions is it valid to pass NULL as the error
 /// argument. Passing NULL as the error argument will end up in undefined behavior via
 /// trying to write a value to NULL.
@@ -34,12 +34,12 @@
 /// This list is not a set size, and will grow as necessary as items are added to it.
 ///
 /// It is generally valid to read from and write to the memory pointed to between
-/// `data` and `data + (stride * len)`. However, because many `cave_vec` functions reallocate,
+/// `data` and `data + (element_size * len)`. However, because many `cave_vec` functions reallocate,
 /// pointers to any of that data may become invalidated across `cave_vec` function calls.
 ///
 /// When the vector is no longer needed, call `cave_vec_release()` on it to free the memory.
 ///
-/// `data`, `stride`, `capacity` and `len` should never be modified directly.
+/// `data`, `element_size`, `capacity` and `len` should never be modified directly.
 typedef struct CaveVec {
     void* data;
     size_t stride;
@@ -105,7 +105,7 @@ void cave_vec_release(CaveVec* v);
 /// `v->len` by 1.
 ///
 /// \param v - Target vector to act on.
-/// \param element - A pointer to the object to copy into `v->data`. `v->stride` number of bytes will be
+/// \param element - A pointer to the object to copy into `v->data`. `v->element_size` number of bytes will be
 ///                  copied.
 /// \param[out] err - The error recording argument. If there is an error, it is written to this argument.
 ///                   Otherwise `CAVE_NO_ERROR` is written to err.
@@ -127,10 +127,15 @@ CaveVec* cave_vec_push(CaveVec* v, void const* element, CaveError* err);
 ///                   * CAVE_INDEX_ERROR - If index is greater than `v->len - 1`.
 /// \return A pointer to the element at `index` on success, or NULL if there is an error.
 /// Strictly speaking, if all parameters are valid, then
-/// the pointer returned is `v->data + (v->stride * index)`. You may read from and write to this pointer.
+/// the pointer returned is `v->data + (v->element_size * index)`. You may read from and write to this pointer.
 /// However, as many `cave_vec` functions reallocate, this pointer may become invalidated across
 /// a `cave_vec` function call.
 void* cave_vec_at(CaveVec const* v, size_t index, CaveError* err);
+
+/// \brief The way to access and modify an element of the vector without bounds checking.
+///
+/// Obviously memory issues abound if index is greater than `v->len`.
+inline void* cave_vec_at_unchecked(CaveVec* v, size_t index);
 
 /// \brief Copies `element` into the index specified.
 ///
@@ -139,7 +144,7 @@ void* cave_vec_at(CaveVec const* v, size_t index, CaveError* err);
 /// `index`.
 ///
 /// \param v - The target vector.
-/// \param element - Pointer to the object to copy into `v`. `v->stride` number of bytes
+/// \param element - Pointer to the object to copy into `v`. `v->element_size` number of bytes
 ///                  will be copied from `element` into `v`.
 /// \param index - The index of the where to copy the element. Must be between 0 and `v->len - 1` (inclusive).
 /// \param[out] err - The error recording argument. If there is an error, it is written to this argument.
@@ -335,6 +340,73 @@ CaveVec* cave_vec_map(CaveVec* dest, CaveVec const * src, size_t output_stride, 
  * split_by
  * remove_indexes
  */
+
+
+//><<     ><<      ><         ><< <<   ><<     ><<    ><<       ><<      ><       ><<<<<<<
+//><<     ><<     >< <<     ><<    ><< ><<     ><<    >< ><<   ><<<     >< <<     ><<    ><<
+//><<     ><<    ><  ><<     ><<       ><<     ><<    ><< ><< > ><<    ><  ><<    ><<    ><<
+//><<<<<< ><<   ><<   ><<      ><<     ><<<<<< ><<    ><<  ><<  ><<   ><<   ><<   ><<<<<<<
+//><<     ><<  ><<<<<< ><<        ><<  ><<     ><<    ><<   ><  ><<  ><<<<<< ><<  ><<
+//><<     ><< ><<       ><< ><<    ><< ><<     ><<    ><<       ><< ><<       ><< ><<
+//><<     ><<><<         ><<  ><< <<   ><<     ><<    ><<       ><<><<         ><<><<
+
+static const size_t CavePrimeList[] = {
+        2, 3, 5, 7, 11, 13, ....
+};
+
+typedef size_t (*CAVE_HASH_FN)(void const * key);
+typedef bool (*CAVE_EQ_FN)(void const * a, void const * b);
+
+typedef struct CaveKeyValue {
+    void* key;
+    void* value;
+} CaveKeyValue;
+
+typedef struct CaveHashMap {
+    size_t key_size;
+    size_t value_size;
+    size_t capacity;
+    size_t count;
+    CAVE_HASH_FN hash_fn;
+    CAVE_EQ_FN key_eq_fn;
+    CaveVec buckets; //this will be a Vec<Vec<CaveKeyValue>>
+    CaveVec occupied_buckets; //list of indexes of buckets that are occupied. ie, buckets[i].len != 0.
+} CaveHashMap;
+
+/// key_eq_fn can be null
+CaveHashMap* cave_hashmp_init(
+        CaveHashMap* h,
+        size_t value_size,
+        size_t key_size,
+        size_t min_capacity,
+        CAVE_HASH_FN hash_fn,
+        CAVE_EQ_FN key_eq_fn,
+        CaveError* err
+        );
+void cave_hashmp_release(CaveHashMap* h);
+
+/// key and value may both be copied.
+///
+/// \param key -
+/// \pararm value - address of value to be copied into the hashmap. If the value in question is not trivially copiable,
+/// then pass a pointer to it instead.
+CaveHashMap* cave_hashmp_insert(CaveHashMap* h, void const * key, void const * value, CaveError* err);
+void* cave_hashmp_at(CaveHashMap* h, void const * key, CaveError* err);
+
+/// \param[out] removed_element -
+CaveHashMap* cave_hashmap_remove(CaveHashMap* h, void const * key, CaveKeyValue* removed_element, CaveError* err);
+
+/// \param[out] elements - Address of a vector to store pointers to all the elements removed. Primarily this
+/// is done so that the user may free/release the keys and values in whatever way is appropriate. If
+/// `keys` is set to `NULL`, then this function will call `free()` on the stored pointers to each key and value
+/// respectively.
+CaveHashMap* cave_hashmp_clear(CaveHashMap* h, CaveVec* elements, CaveError* err);
+
+CaveHashMap* cave_hashmp_rehash(CaveHashMap* h, size_t new_min_capacity, CaveError* err);
+
+size_t cave_hashmp_total_collisions(CaveHashMap* h);
+
+size_t cave_hashmp_max_collisions(CaveHashMap)
 
 
 #endif //CAVE_BEDROCK_H

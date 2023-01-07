@@ -6,6 +6,16 @@
 #include <strings.h>
 #include "cave-bedrock.h"
 
+
+//><<         ><<><<<<<<<<    ><<
+// ><<       ><< ><<       ><<   ><<
+//  ><<     ><<  ><<      ><<
+//   ><<   ><<   ><<<<<<  ><<
+//    ><< ><<    ><<      ><<
+//     ><<<<     ><<       ><<   ><<
+//      ><<      ><<<<<<<<   ><<<<
+
+
 CaveVec* cave_vec_init(CaveVec* v, size_t element_size, size_t initial_capacity, CaveError* err) {
     if(!v || element_size == 0) {
         *err = CAVE_DATA_ERROR;
@@ -105,6 +115,10 @@ void* cave_vec_at(CaveVec const* v, size_t index, CaveError* err) {
         return NULL;
     }
     *err = CAVE_NO_ERROR;
+    return v->data + (v->stride * index);
+}
+
+void* cave_vec_at_unchecked(CaveVec* v, size_t index) {
     return v->data + (v->stride * index);
 }
 
@@ -323,4 +337,149 @@ CaveVec* cave_vec_map(CaveVec* dest, CaveVec const* src, size_t output_stride, C
     }
     *err = CAVE_NO_ERROR;
     return dest;
+}
+
+
+//><<     ><<      ><         ><< <<  ><<     ><<    ><<       ><<      ><       ><<<<<<<
+//><<     ><<     >< <<     ><<    ><<><<     ><<    >< ><<   ><<<     >< <<     ><<    ><<
+//><<     ><<    ><  ><<     ><<      ><<     ><<    ><< ><< > ><<    ><  ><<    ><<    ><<
+//><<<<<< ><<   ><<   ><<      ><<    ><<<<<< ><<    ><<  ><<  ><<   ><<   ><<   ><<<<<<<
+//><<     ><<  ><<<<<< ><<        ><< ><<     ><<    ><<   ><  ><<  ><<<<<< ><<  ><<
+//><<     ><< ><<       ><< ><<    ><<><<     ><<    ><<       ><< ><<       ><< ><<
+//><<     ><<><<         ><<  ><< <<  ><<     ><<    ><<       ><<><<         ><<><<
+
+CaveVec* hidden_cave_hashmp_get_bucket_unchecked(CaveHashMap* h, void const * key) {
+    size_t hash = h->hash_fn(key);
+    size_t bucket_index = hash % h->capacity;
+    return cave_vec_at_unchecked(&h->buckets, bucket_index);
+}
+
+for(int i = 0; i < bucket->len; i++) {
+    //TODO: feature request a `cave_vec_at_unchecked()` fn
+    CaveKeyValue* kv = cave_vec_at(bucket, i, err);
+    if(h->key_eq_fn(key, kv->key) ) {
+        *err = CAVE_NO_ERROR;
+        return kv->value;
+    }
+}
+
+/// \return pointer to CaveKeyValue in the bucket if it is there, and `NULL` if it is not.
+CaveKeyValue* hidden_cave_hashmp_key_in_bucket(CaveHashMap* h, CaveVec* bucket, void const * key) {
+    for(size_t i = 0; i < bucket->len; i++) {
+        CaveKeyValue* kv = cave_vec_at_unchecked(bucket, i);
+        if( h->key_eq_fn(kv->key, key) ) {
+            return kv;
+        }
+    }
+    return NULL;
+}
+
+CaveHashMap* cave_hashmp_init(
+        CaveHashMap* h,
+        size_t value_size,
+        size_t key_size,
+        size_t min_capacity,
+        CAVE_HASH_FN hash_fn,
+        CAVE_EQ_FN key_eq_fn,
+        CaveError* err
+) {
+    *err = CAVE_NO_ERROR;
+
+    h->element_size = value_size;
+    h->key_size = key_size;
+    h->hash_fn = hash_fn;
+    h->key_eq_fn = key_eq_fn;
+
+    h->capacity = 0;
+    for(size_t i = 0; i < CavePrimeListLen; i++) {
+        if(CavePrimeList[i] >= min_capacity) {
+            h->capacity = CavePrimeList[i];
+        }
+    }
+    if(h->capacity == 0) {
+        *err = CAVE_INSUFFICIENT_MEMORY_ERROR;
+        return NULL;
+    }
+
+    cave_vec_init(&h->buckets, sizeof(CaveVec), h->capacity, err);
+    if(err != CAVE_NO_ERROR) {
+        return NULL;
+    }
+    for(size_t i = 0; i < h->capacity; i++) {
+//        cave_vec_init(&h->buckets, sizeof(CaveKeyValue), h->capacity, err);
+        CaveVec bucket;
+        cave_vec_init(&bucket, sizeof(CaveKeyValue), 1, err);
+        if(err != CAVE_NO_ERROR) {
+            goto HANDLE_ERROR;
+        }
+        cave_vec_push(&h->buckets, &bucket, err);
+        if(err != CAVE_NO_ERROR) {
+            goto HANDLE_ERROR;
+        }
+
+        continue;
+
+        HANDLE_ERROR:
+        //free all the buckets. return NULL;
+        exit(5);
+    }
+
+    //arguably there's a more intelligent default capacity to pick, but not obviously to me
+    //what that should be, and trying to keep memory overhead low
+    cave_vec_init(&h->occupied_buckets, sizeof(size_t), 0, err);
+    if(err != CAVE_NO_ERROR) {
+        return NULL;
+    }
+}
+
+void cave_hashmp_release(CaveHashMap* h) {
+
+}
+
+CaveHashMap* cave_hashmp_insert(CaveHashMap* h, void const * key, void const * value, CaveError* err) {
+    *err = CAVE_NO_ERROR;
+    CaveVec* bucket = hidden_cave_hashmp_get_bucket_unchecked(h, key);
+    CaveKeyValue* existing_kv = hidden_cave_hashmp_key_in_bucket(h, bucket, key);
+    if(existing_kv) {
+        memcpy(existing_kv->value, value, h->value_size);
+        return h;
+    }
+
+    CaveKeyValue new_kv;
+    memcpy(&new_kv.key, key, h->key_size);
+    memcpy(&new_kv.value, value, h->value_size);
+
+    cave_vec_push(bucket, &new_kv, err);
+    if(err != CAVE_NO_ERROR) {
+        return NULL;
+    }
+
+    return h;
+}
+
+void* cave_hashmp_at(CaveHashMap* h, void const * key, CaveError* err) {
+    *err = CAVE_NO_ERROR;
+//    size_t hash = h->hash_fn(key);
+//    size_t bucket_index = hash % h->capacity;
+//    CaveVec* bucket = cave_vec_at(&h->buckets, bucket_index, err);
+    CaveVec* bucket = hidden_cave_hashmp_get_bucket_unchecked(h, key);
+
+    //if bucket->len = 0, then there are no elements with that key and this loop is skipped.
+    for(int i = 0; i < bucket->len; i++) {
+        //TODO: feature request a `cave_vec_at_unchecked()` fn
+        CaveKeyValue* kv = cave_vec_at(bucket, i, err);
+        if(h->key_eq_fn(key, kv->key) ) {
+            *err = CAVE_NO_ERROR;
+            return kv->value;
+        }
+    }
+    //if there is an element with the appropriate key, the function will have already returned.
+    //So the following is if there is no element with the provided key.
+    //TODO: set the error to something more helpful
+    *err = CAVE_INDEX_ERROR;
+    return NULL;
+}
+
+CaveHashMap* cave_hashmp_clear(CaveHashMap* h, CaveError* err) {
+
 }
