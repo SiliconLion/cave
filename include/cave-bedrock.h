@@ -256,6 +256,18 @@ CaveVec* cave_vec_cpy_init(CaveVec* dest, CaveVec const* src, CaveError* err);
 /// \return `dest` on success and NULL if there is an error.
 CaveVec* cave_vec_cpy_assign(CaveVec* dest, CaveVec const* src, CaveError* err);
 
+/// Copies all the elements from `src` into the end of `dest`
+///
+/// \param dest - The CaveVec being copied into.
+/// \param src - The CaveVec being copied from.
+/// \param[out] err - The error recording argument. If there is an error, it is written to this argument.
+///                   Otherwise `CAVE_NO_ERROR` is written to err.
+///                   Errors:
+///                   * CAVE_INSUFFICIENT_MEMORY_ERROR - If there is not enough memory to copy the contents
+///                   of `src` to `dest`.
+/// \return `dest` on success, `NULL` on error.
+CaveVec* cave_vec_append(CaveVec* dest, CaveVec const* src, CaveError* err);
+
 
 typedef void (*CAVE_FOREACH_CLOSURE)(void* element, void* closure_data, CaveError* err);
 typedef bool (*CAVE_FILTER_CLOSURE)(void const* element, void* closure_data, CaveError* err);
@@ -351,7 +363,15 @@ CaveVec* cave_vec_map(CaveVec* dest, CaveVec const * src, size_t output_stride, 
 //><<     ><<><<         ><<  ><< <<   ><<     ><<    ><<       ><<><<         ><<><<
 
 static const size_t CavePrimeList[] = {
-        2, 3, 5, 7, 11, 13, ....
+        2 , 5 , 11 , 17 , 29 , 47 , 71 , 107 , 163 , 251 ,
+        379 , 569 , 857 , 1289 , 1949 , 2927 , 4391 , 6599 ,
+        9901 , 14867 , 22303 , 33457 , 50207 , 75323 , 112997 ,
+        169501 , 254257 , 381389 , 572087 , 858149 , 1287233 ,
+        1930879 , 2896319 , 4344479 , 6516739 , 9775111 , 14662727 ,
+        21994111 , 32991187 , 49486793 , 74230231 , 111345347 ,
+        167018021 , 250527047 , 375790601 , 563685907 , 845528867 ,
+        1268293309 , 1902439967 , 2853659981 , 4280489981 , 6420734989 ,
+        9631102487
 };
 
 typedef size_t (*CAVE_HASH_FN)(void const * key);
@@ -393,20 +413,36 @@ void cave_hashmp_release(CaveHashMap* h);
 CaveHashMap* cave_hashmp_insert(CaveHashMap* h, void const * key, void const * value, CaveError* err);
 void* cave_hashmp_at(CaveHashMap* h, void const * key, CaveError* err);
 
-/// \param[out] removed_element -
-CaveHashMap* cave_hashmap_remove(CaveHashMap* h, void const * key, CaveKeyValue* removed_element, CaveError* err);
+/// \return the key-value pair that was removed by this key
+CaveKeyValue cave_hashmap_remove(CaveHashMap* h, void const * key, CaveError* err);
 
-/// \param[out] elements - Address of a vector to store pointers to all the elements removed. Primarily this
-/// is done so that the user may free/release the keys and values in whatever way is appropriate. If
-/// `keys` is set to `NULL`, then this function will call `free()` on the stored pointers to each key and value
-/// respectively.
-CaveHashMap* cave_hashmp_clear(CaveHashMap* h, CaveVec* elements, CaveError* err);
+/// Bitwise copies all key-value pairs into a CaveVec.
+/// \param h
+/// \param key
+/// \param err
+/// \return
+void cave_hashmp_collect(CaveHashMap* h, CaveVec* v, CaveError* err);
+
+CaveHashMap* cave_hashmp_clear(CaveHashMap* h, CaveError* err);
 
 CaveHashMap* cave_hashmp_rehash(CaveHashMap* h, size_t new_min_capacity, CaveError* err);
 
 size_t cave_hashmp_total_collisions(CaveHashMap* h);
 
-size_t cave_hashmp_max_collisions(CaveHashMap)
+size_t cave_hashmp_max_collisions(CaveHashMap* h );
+
+CaveHashMap* cave_hashmp_foreach(CaveHashMap * h, CAVE_FOREACH_CLOSURE fn, void* closure_data, CaveError* err);
+
+//the following two functions perform shallow copies. If the keys or values being stored in the CaveHashMap are
+//pointers to an item allocated on the heap, or needs some custom copy function to be run, call the _custom versions
+//of these functions.
+CaveHashMap* cave_hashmp_cpy_assign(CaveHashMap* dest, CaveHashMap const * src, CaveError* err);
+CaveHashMap* cave_hashmp_cpy_init(CaveHashMap* dest, CaveHashMap const * src, CaveError* err);
+
+
+
+CaveHashMap* cave_hashmp_cpy_assign_custom(CaveHashMap* dest, CaveHashMap const * src, CaveError* err);
+CaveHashMap* cave_hashmp_cpy_init_custom(CaveHashMap* dest, CaveHashMap const * src, CaveError* err);
 
 
 #endif //CAVE_BEDROCK_H

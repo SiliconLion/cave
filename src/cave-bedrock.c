@@ -7,13 +7,13 @@
 #include "cave-bedrock.h"
 
 
-//><<         ><<><<<<<<<<    ><<
-// ><<       ><< ><<       ><<   ><<
-//  ><<     ><<  ><<      ><<
-//   ><<   ><<   ><<<<<<  ><<
-//    ><< ><<    ><<      ><<
-//     ><<<<     ><<       ><<   ><<
-//      ><<      ><<<<<<<<   ><<<<
+// ><<         ><<><<<<<<<<    ><<
+//  ><<       ><< ><<       ><<   ><<
+//   ><<     ><<  ><<      ><<
+//    ><<   ><<   ><<<<<<  ><<
+//     ><< ><<    ><<      ><<
+//      ><<<<     ><<       ><<   ><<
+//       ><<      ><<<<<<<<   ><<<<
 
 
 CaveVec* cave_vec_init(CaveVec* v, size_t element_size, size_t initial_capacity, CaveError* err) {
@@ -250,6 +250,24 @@ CaveVec* cave_vec_cpy_assign(CaveVec* dest, CaveVec const* src, CaveError* err) 
     return dest;
 }
 
+CaveVec* cave_vec_append(CaveVec* dest, CaveVec const* src, CaveError* err) {
+    if(dest->len + src->len > dest->capacity) {
+        void* ret = realloc(dest->data, dest->len + src->len);
+        if(!ret) {
+            *err = CAVE_INSUFFICIENT_MEMORY_ERROR;
+            return NULL;
+        }
+        dest->data = ret;
+    }
+
+    memcpy(
+            dest->data + (dest->stride * dest->len), //pointer to the first unused index in dest->data
+            src->data,
+            src->stride * src->len
+            );
+    return dest;
+}
+
 CaveVec* cave_vec_clear(CaveVec* v, CaveError* err) {
     if(!v) {
         *err = CAVE_DATA_ERROR;
@@ -340,13 +358,13 @@ CaveVec* cave_vec_map(CaveVec* dest, CaveVec const* src, size_t output_stride, C
 }
 
 
-//><<     ><<      ><         ><< <<  ><<     ><<    ><<       ><<      ><       ><<<<<<<
-//><<     ><<     >< <<     ><<    ><<><<     ><<    >< ><<   ><<<     >< <<     ><<    ><<
-//><<     ><<    ><  ><<     ><<      ><<     ><<    ><< ><< > ><<    ><  ><<    ><<    ><<
-//><<<<<< ><<   ><<   ><<      ><<    ><<<<<< ><<    ><<  ><<  ><<   ><<   ><<   ><<<<<<<
-//><<     ><<  ><<<<<< ><<        ><< ><<     ><<    ><<   ><  ><<  ><<<<<< ><<  ><<
-//><<     ><< ><<       ><< ><<    ><<><<     ><<    ><<       ><< ><<       ><< ><<
-//><<     ><<><<         ><<  ><< <<  ><<     ><<    ><<       ><<><<         ><<><<
+//  ><<     ><<      ><         ><< <<  ><<     ><<    ><<       ><<      ><       ><<<<<<<
+//  ><<     ><<     >< <<     ><<    ><<><<     ><<    >< ><<   ><<<     >< <<     ><<    ><<
+//  ><<     ><<    ><  ><<     ><<      ><<     ><<    ><< ><< > ><<    ><  ><<    ><<    ><<
+//  ><<<<<< ><<   ><<   ><<      ><<    ><<<<<< ><<    ><<  ><<  ><<   ><<   ><<   ><<<<<<<
+//  ><<     ><<  ><<<<<< ><<        ><< ><<     ><<    ><<   ><  ><<  ><<<<<< ><<  ><<
+//  ><<     ><< ><<       ><< ><<    ><<><<     ><<    ><<       ><< ><<       ><< ><<
+//  ><<     ><<><<         ><<  ><< <<  ><<     ><<    ><<       ><<><<         ><<><<
 
 CaveVec* hidden_cave_hashmp_get_bucket_unchecked(CaveHashMap* h, void const * key) {
     size_t hash = h->hash_fn(key);
@@ -385,7 +403,7 @@ CaveHashMap* cave_hashmp_init(
 ) {
     *err = CAVE_NO_ERROR;
 
-    h->element_size = value_size;
+    h->value_size = value_size;
     h->key_size = key_size;
     h->hash_fn = hash_fn;
     h->key_eq_fn = key_eq_fn;
@@ -394,6 +412,7 @@ CaveHashMap* cave_hashmp_init(
     for(size_t i = 0; i < CavePrimeListLen; i++) {
         if(CavePrimeList[i] >= min_capacity) {
             h->capacity = CavePrimeList[i];
+            break;
         }
     }
     if(h->capacity == 0) {
@@ -446,13 +465,20 @@ CaveHashMap* cave_hashmp_insert(CaveHashMap* h, void const * key, void const * v
     }
 
     CaveKeyValue new_kv;
+    new_kv.key = malloc(h->key_size);
+    new_kv.value = malloc(h->value_size);
+    if(!new_kv.key || !new_kv.value) {
+        *err = CAVE_INSUFFICIENT_MEMORY_ERROR;
+        return NULL;
+    }
     memcpy(&new_kv.key, key, h->key_size);
     memcpy(&new_kv.value, value, h->value_size);
 
     cave_vec_push(bucket, &new_kv, err);
-    if(err != CAVE_NO_ERROR) {
+    if(*err != CAVE_NO_ERROR) {
         return NULL;
     }
+    h->count += 1;
 
     return h;
 }
@@ -481,5 +507,118 @@ void* cave_hashmp_at(CaveHashMap* h, void const * key, CaveError* err) {
 }
 
 CaveHashMap* cave_hashmp_clear(CaveHashMap* h, CaveError* err) {
+    for(size_t i = 0; i < h->occupied_buckets.len; i++) {
+        size_t bucket_index = *(size_t*)cave_vec_at_unchecked(&h->occupied_buckets, i);
+        CaveVec* bucket = cave_vec_at_unchecked(&h->buckets, bucket_index);
+        for(size_t j = 0; j < bucket->len; j++) {
+            CaveKeyValue kv = *(CaveKeyValue*) cave_vec_at_unchecked(bucket, j);
+            //TODO: im kinda thinking that this should actually be calling a user defined function.....
+            free(kv.key);
+            free(kv.value);
+        }
+        cave_vec_clear(bucket, err);
+        if(*err != CAVE_NO_ERROR) {
+            return NULL;
+        }
+    }
+    return h;
+}
+
+CaveHashMap* cave_hashmp_foreach(CaveHashMap * h, CAVE_FOREACH_CLOSURE fn, void* closure_data, CaveError* err) {
+    *err = CAVE_NO_ERROR;
+    for(size_t i = 0; i < h->occupied_buckets.len; i++) {
+        size_t bucket = *( (size_t*)cave_vec_at_unchecked(&h->occupied_buckets, i) );
+        cave_vec_foreach(
+                cave_vec_at_unchecked(&h->buckets, bucket),
+                fn,
+                closure_data,
+                err
+                );
+    }
+}
+
+
+//TODO: give less confusing name.
+void hidden_cave_transfer_element(CaveKeyValue* element, CaveHashMap* h, CaveError* err) {
+    cave_hashmp_insert(h, &element->key, &element->value, err);
+}
+
+CaveHashMap* cave_hashmp_rehash(CaveHashMap* h, size_t new_min_capacity, CaveError* err) {
+    *err = CAVE_NO_ERROR;
+
+    CaveHashMap new_h;
+    cave_hashmp_init(&new_h, h->value_size, h->key_size, new_min_capacity, h->hash_fn, h->key_eq_fn, err);
+    if(*err != CAVE_NO_ERROR) {
+        return NULL;
+    }
+
+    cave_hashmp_foreach(h, (CAVE_FOREACH_CLOSURE)&hidden_cave_transfer_element, &new_h, err);
+    if(*err != CAVE_NO_ERROR) {
+        return NULL;
+    }
+    cave_hashmp_cpy_assign(h, &new_h, err);
+    cave_hashmp_release(&new_h);
+    if(*err != CAVE_NO_ERROR) {
+        return NULL;
+    }
+    return h;
+}
+
+size_t cave_hashmp_total_collisions(CaveHashMap* h) {
+}
+
+size_t cave_hashmp_max_collisions(CaveHashMap* h ) {
 
 }
+
+void cave_hashmp_collect(CaveHashMap* h, CaveVec* v, CaveError* err) {
+    CaveVec v;
+    cave_vec_init(&v, );
+
+    for(size_t i = 0; i < h->occupied_buckets.len; i++) {
+        size_t bucket_index = *(size_t*)cave_vec_at_unchecked(&h->occupied_buckets, i);
+        CaveVec* bucket = cave_vec_at_unchecked(&h->buckets, bucket_index);
+        cave_vec_clear(bucket, err);
+        if(*err != CAVE_NO_ERROR) {
+            return NULL;
+        }
+    }
+    return h;
+}
+
+
+CaveHashMap* cave_hashmp_cpy_assign(CaveHashMap* dest, CaveHashMap const * src, CaveError* err) {
+    cave_hashmp_clear(dest, err);
+    if(*err != CAVE_NO_ERROR) {
+        return NULL;
+    }
+    cave_vec_release(&dest->buckets);
+    cave_vec_clear(&dest->occupied_buckets, err);
+    if(*err != CAVE_NO_ERROR) {
+        return NULL;
+    }
+
+    
+}
+
+CaveHashMap* cave_hashmp_cpy_init(CaveHashMap* dest, CaveHashMap const * src, CaveError* err) {
+    cave_hashmp_init(
+            dest,
+            src->value_size,
+            src->key_size,
+            src->capacity,
+            src->hash_fn,
+            src->key_eq_fn,
+            err
+            );
+    if(*err != CAVE_NO_ERROR) {
+        return NULL;
+    }
+
+    cave_hashmp_cpy_assign(dest, src, err);
+    if(*err != CAVE_NO_ERROR) {
+        return NULL;
+    }
+}
+
+
