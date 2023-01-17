@@ -366,6 +366,45 @@ CaveVec* cave_vec_map(CaveVec* dest, CaveVec const* src, size_t output_stride, C
 //  ><<     ><< ><<       ><< ><<    ><<><<     ><<    ><<       ><< ><<       ><< ><<
 //  ><<     ><<><<         ><<  ><< <<  ><<     ><<    ><<       ><<><<         ><<><<
 
+//DEF_CAVE_HASH_FN_DEFAULT(int)
+//
+//
+//cave_hashmp_init(
+//        ...
+//        CAVE_HASH_FN_DEFAULT(int)
+//        ...
+//)
+
+void hidden_cave_kv_simple_free(CaveKeyValue* kv) {
+    free(kv->key);
+    free(kv-value);
+}
+CAVE_KV_DESTRUCTOR cave_kv_default_destructor = &hidden_cave_kv_simple_free;
+
+static const size_t CavePrimeList[] = {
+        2 , 5 , 11 , 17 , 29 , 47 , 71 , 107 , 163 , 251 ,
+        379 , 569 , 857 , 1289 , 1949 , 2927 , 4391 , 6599 ,
+        9901 , 14867 , 22303 , 33457 , 50207 , 75323 , 112997 ,
+        169501 , 254257 , 381389 , 572087 , 858149 , 1287233 ,
+        1930879 , 2896319 , 4344479 , 6516739 , 9775111 , 14662727 ,
+        21994111 , 32991187 , 49486793 , 74230231 , 111345347 ,
+        167018021 , 250527047 , 375790601 , 563685907 , 845528867 ,
+        1268293309 , 1902439967 , 2853659981 , 4280489981 ,
+
+#if UINTPTR_MAX >= UINT64_MAX
+        6420734989 ,9631102487 //TODO: Expand this list
+#endif
+};
+
+#if UINTPTR_MAX >= UINT64_MAX
+static const size_t CavePrimeListLen = 53;
+#else
+static const size_t CavePrimeListLen = 51;
+#endif
+
+
+
+
 CaveVec* hidden_cave_hashmp_get_bucket_unchecked(CaveHashMap* h, void const * key) {
     size_t hash = h->hash_fn(key);
     size_t bucket_index = hash % h->capacity;
@@ -392,13 +431,20 @@ CaveKeyValue* hidden_cave_hashmp_key_in_bucket(CaveHashMap* h, CaveVec* bucket, 
     return NULL;
 }
 
+void cave_simple_free_kv(CaveKeyValue kv) {
+    free(kv.key);
+    free(kv.value);
+}
+
+
+
 CaveHashMap* cave_hashmp_init(
         CaveHashMap* h,
         size_t value_size,
         size_t key_size,
         size_t min_capacity,
         CAVE_HASH_FN hash_fn,
-        CAVE_EQ_FN key_eq_fn,
+        CAVE_KEY_EQ_FN key_eq_fn,
         CaveError* err
 ) {
     *err = CAVE_NO_ERROR;
@@ -597,8 +643,6 @@ CaveHashMap* cave_hashmp_cpy_assign(CaveHashMap* dest, CaveHashMap const * src, 
     if(*err != CAVE_NO_ERROR) {
         return NULL;
     }
-
-    
 }
 
 CaveHashMap* cave_hashmp_cpy_init(CaveHashMap* dest, CaveHashMap const * src, CaveError* err) {
