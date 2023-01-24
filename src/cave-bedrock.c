@@ -366,20 +366,8 @@ CaveVec* cave_vec_map(CaveVec* dest, CaveVec const* src, size_t output_stride, C
 //  ><<     ><< ><<       ><< ><<    ><<><<     ><<    ><<       ><< ><<       ><< ><<
 //  ><<     ><<><<         ><<  ><< <<  ><<     ><<    ><<       ><<><<         ><<><<
 
-//DEF_CAVE_HASH_FN_DEFAULT(int)
-//
-//
-//cave_hashmp_init(
-//        ...
-//        CAVE_HASH_FN_DEFAULT(int)
-//        ...
-//)
-
-void hidden_cave_kv_simple_free(CaveKeyValue* kv) {
-    free(kv->key);
-    free(kv-value);
-}
-CAVE_KV_DESTRUCTOR cave_kv_default_destructor = &hidden_cave_kv_simple_free;
+DEF_CAVE_HASH_FN_DEFAULT(int)
+CAVE_HASH_FN_DEFAULT(int)
 
 static const size_t CavePrimeList[] = {
         2 , 5 , 11 , 17 , 29 , 47 , 71 , 107 , 163 , 251 ,

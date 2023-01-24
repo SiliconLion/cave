@@ -362,45 +362,59 @@ CaveVec* cave_vec_map(CaveVec* dest, CaveVec const * src, size_t output_stride, 
 //   ><<     ><< ><<       ><< ><<    ><< ><<     ><<    ><<       ><< ><<       ><< ><<
 //   ><<     ><<><<         ><<  ><< <<   ><<     ><<    ><<       ><<><<         ><<><<
 
+/// \defgroup CaveHashMap CaveHashMap
+///@{
 
+/// A `cpy` variation of a function will call the associated `CAVE_<type>_CPY_FN` on the appropreate type.
+/// A `mv` variation of a function will bitwise cpy the element into the destination, and free the memory the element
+/// was being held in, but will not call a destructor.
+
+
+
+/// A struct used by CaveHashMap to hold keys and values of runtime determined types.
 typedef struct CaveKeyValue {
     void* key;
     void* value;
 } CaveKeyValue;
 
+/// \brief Helper function to compute a hash on arbitrary contiguous data.
 size_t cave_hash_arbirary_bytes(void const * key, size_t byte_count);
 
+///\defgroup CaveHashMap-Member-Function-Types CaveHashMap Member Function Types
+///@{
+
+///
 typedef size_t (*CAVE_HASH_FN)(void const * key);
 
-/// Interface for users to define equality for CaveHashMap keys. A `CAVE_KEY_EQ_FN` should return true
-/// if the two keys are "equal" and false if they are "not equal". Useful for things like using
-/// case insensitive strings as keys. **IMPORTANT** In order for a function to be a valid `CAVE_KEY_EQ_FN`,
+/// \brief Interface for users to define equality for CaveHashMap keys.
+///
+/// A `CAVE_KEY_EQ_FN` should return true if the two keys are "equal" and false if they are "not equal".
+/// **IMPORTANT** In order for a function to be a valid `CAVE_KEY_EQ_FN`,
 /// the function should not return true unless the hash of key_a == hash of key_b . Obviously this depends on
-// the hash function supplied. The bugs that are caused by this condition being violated are sporaddic and will
-/// appear and dissapear.
+/// the hash function supplied. The bugs that are caused by this condition being violated are sporaddic and will
+/// appear and disappear.
+///
+/// Useful for things like using case insensitive strings as keys.
 typedef bool (*CAVE_KEY_EQ_FN)(void const * key_a, void const * key_b);
 
 /// Can return an error for any reason, but generally should stick to returning an error on allocation failure.
-typedef CaveError (*CAVE_KV_CPY_FN)(CaveKeyValue* dest, CaveKeyValue* src);
+typedef CaveError (*CAVE_KEY_CPY_FN)(CaveKeyValue* dest_key, CaveKeyValue const* src);
+/// Can return an error for any reason, but generally should stick to returning an error on allocation failure.
+typedef CaveError (*CAVE_VALUE_CPY_FN)(CaveKeyValue* dest, CaveKeyValue const* src);
 
-typedef void (*CAVE_KV_DESTRUCTOR)(CaveKeyValue kv);
+typedef void (*CAVE_KV_DESTRUCT_FN)(CaveKeyValue kv);
 
-//#define DEF_CAVE_HASH_FN_DEFAULT(key_type) \
-//    #ifndef DEF_CAVE_HASH_FN_DEFAULT_#keytype \
-//        #define DEF_CAVE_HASH_FN_DEFAULT_#keytype \
-//        size_t cave_hash_fn_default_#keytype(void const * key) { \
-//            return cave_hash_arbitrary_bytes(key, sizeof(key_type)); \
-//        } \
-//    #endif
-//
-//
-//#define CAVE_HASH_FN_DEFAULT(key_type) \
-//    #ifdef DEF_CAVE_HASH_FN_DEFAULT_#keytype \
-//        (CAVE_HASH_FN)&cave_hash_fn_default_#keytype \
-//    #else \
-//        You must call the appropreate DEF_CAVE_HASH_FN_DEFAULT macro before using this one \
-//
-//
+/// \defgroup CaveHashMap-Default-Member-Fns CaveHashMap Default Member Functions
+/// @{
+#define DEF_CAVE_HASH_FN_DEFAULT(key_type) \
+    size_t cave_hash_fn_default_##key_type(void const * key) { \
+        return cave_hash_arbirary_bytes(key, sizeof(key_type)); \
+    }
+
+#define CAVE_HASH_FN_DEFAULT(key_type) \
+    (CAVE_HASH_FN)&cave_hash_fn_default_##key_type
+
+
 //
 //#define DEF_CAVE_KEY_EQ_FN_DEFAULT(key_type) \
 //
@@ -410,17 +424,25 @@ typedef void (*CAVE_KV_DESTRUCTOR)(CaveKeyValue kv);
 
 //#define CAVE_KV_CPY_DEFAULT(key_type, value_type) \
 
+extern CAVE_KV_DESTRUCT_FN cave_kv_default_destructor;
 
+//end of CaveHashMap-Default-Member-Fns
+/// @}
 
-extern CAVE_KV_DESTRUCTOR cave_kv_default_destructor;
+//end of CaveHashMap-Member-Function-Types
+/// @}
+
 
 typedef struct CaveHashMap {
+    size_t count;
+    size_t capacity;
     size_t key_size;
     size_t value_size;
-    size_t capacity;
-    size_t count;
     CAVE_HASH_FN hash_fn;
     CAVE_KEY_EQ_FN key_eq_fn;
+    CAVE_KEY_CPY_FN key_cpy_fn;
+    CAVE_VALUE_CPY_FN value_cpy_fn;
+    CAVE_KV_DESTRUCT_FN kv_destructor;
     CaveVec buckets; //this will be a Vec<Vec<CaveKeyValue>>
     CaveVec occupied_buckets; //list of indexes of buckets that are occupied. ie, all i such that buckets[i].len != 0.
 } CaveHashMap;
@@ -432,72 +454,97 @@ CaveHashMap* cave_hashmp_init(
         size_t key_size,
         size_t min_capacity,
         CAVE_HASH_FN hash_fn,
-        CAVE_KEY_EQ_FN key_eq_fn,
         CaveError* err
         );
 
-/// \brief Frees all memory `h` is holding, but does not call a destructor on the CaveKeyValue pairs as they are freed.
+void cave_hashmp_set_key_eq_fn(CaveHashMap* h, CAVE_KEY_EQ_FN);
+void cave_hashmp_set_key_cpy_fn(CaveHashMap* h, CAVE_KEY_CPY_FN);
+void cave_hashmp_set_value_cpy_fn(CaveHashMap* h, CAVE_VALUE_CPY_FN);
+void cave_hashmp_set_kv_destructor_fn(CaveHashMap* h, CAVE_KV_DESTRUCT_FN);
+
+
+/// \brief Method to call on a CaveHashMap to free it's memory.
+///
+/// Calls the destructor on every CaveKeyValue held by `h` if there is one, then frees all memory `h` is holding.
 ///
 /// \param h - Initialized and valid CaveHashMap. May be empty, but no prior release function may have been applied to `h`.
-void cave_hashmap_release_shallow(CaveHashMap* h);
+void cave_hashmp_release(CaveHashMap* h);
 
-/// \brief Calls destructor on every CaveKeyValue held by `h`, then frees all memory `h` is holding.
+/// \brief Inserts `value` into the hashmap with the corresponding `key`.
 ///
-/// \param h - Initialized and valid CaveHashMap. May be empty, but no prior release function may have been applied to `h`.
-void cave_hashmp_release_deep(CaveHashMap* h, CAVE_KV_DESTRUCTOR destructor_fn);
+/// Creates a `CaveKeyValue`, which we will call `kv` which is inserted into `h` at the location
+/// determined by `h->hash_fn(key)`. Then if `h->key_cpy_fn` is `NULL`, `h->key_size` bytes are copied from
+/// `key` to `kv->key`. If it is not null, then `h->key_cpy_fn(kv->key, key)` is called.
+/// Then if `h->value_cpy_fn` is `NULL`, `h->value_size` bytes are copied from
+/// `value` to `kv->value`. If it is not null, then `h->value_cpy_fn(kv->key, key)` is called.
+///
+/// Increases the `h->count` by 1.
+CaveHashMap* cave_hashmp_insert(CaveHashMap* h, void const * key, void const * value, CaveError* err);
 
-/// Creates and inserts
-CaveHashMap* cave_hashmp_insert_(CaveHashMap* h, void const * key, void const * value, CaveError* err);
+/// \brief If `h` contains a key matching `key`, then updates it with `value`. If not, calls `cave_hashmp_insert(key, value, err)`.
+CaveHashMap* cave_hashmp_update_or_insert(CaveHashMap* h, void const * key, void const * value, CaveError* err);
 
-CavehashMap* cave_hashmp_insert_deep(
-        CaveHashMap* h,
-        void const * key,
-        void const * value,
-        CAVE_KV_CPY_FN,
-        CaveError* err)
 
 /// \brief Returns pointer to value associated with `key`
 ///
-/// Finds a CaveKeyValue with a key that returns true when passed to `h->key_eq_fn`, and returns the value field.
-/// If no such CaveKeyValue can be found, return null.
-///
-/// \param h
-/// \param key
-/// \param err
-/// \return
+/// Finds a CaveKeyValue with a key that returns true when passed to `h->key_eq_fn` (which implies they have the same
+/// hash value), and returns a pointer to the value field.
+/// If no such CaveKeyValue can be found, returns null.
 void* cave_hashmp_at(CaveHashMap* h, void const * key, CaveError* err);
 
-/// \return the key-value pair that was removed by this key
-CaveKeyValue cave_hashmap_remove(CaveHashMap* h, void const * key, CaveError* err);
+/// \brief Removes the key-value pair that matches `key`.
+///
+/// Finds the key-value pair that matches `key`, which we will call `kv.
+/// If `h->kv_destructor` is `NULL`, calls `free(kv->key)` and `free(kv->value).
+/// Otherwise calls `h->kv_destructor(&kv)`.
+CaveHashMap* cave_hashmap_remove(CaveHashMap* h, void const * key, CaveError* err);
 
-/// \brief Bitwise copies all data pointed to by the key-value pairs into a CaveVec.
-void cave_hashmp_collect_shallow(CaveHashMap* h, CaveVec* v, CaveError* err);
-/// \brief uses `cpy_fn` on every key-value pair in `h` to copy every key-value pair into `v`.
-void cave_hashmp_collect_deep(CaveHashMap* h, CaveVec* v, CAVE_KV_CPY_FN cpy_fn, CaveError* err);
+/// \brief Bitwise copies the `CaveKeyValue` corresponding to `key` into `dest`, then deletes it from `h`
+/// without calling the destructor.
+CaveKeyValue* cave_hashmp_move(CaveKeyValue* dest, CaveHashMap* h, void const * key, CaveError* err);
 
-/// \brief Calls destructor on and removes every CaveKeyValue element in `h`, but does not free `h`'s memory.
+/// \brief Copies the `CaveKeyValue` corrisponding to `key` into `dest`.
+///.
+/// If `h->key_cpy_fn` is not `NULL`, uses `h->key_cpy_fn` to copy the key into dest. Otherwise bitwise copies
+/// `h->key_size` bytes into `dest->key`.
+/// If `h->value_cpy_fn` is not `NULL`, uses `h->value_cpy_fn` to copy the key into dest. Otherwise bitwise copies
+///// `h->value_size` bytes into `dest->value`.
+CaveKeyValue* cave_hashmp_cpy_into(CaveKeyValue* dest, CaveHashMap const * h, void const * key, CaveError* err);
+
+
+
+/// \brief Returns a `CaveVec` with type `CaveKeyValue` that has a copy of every key-value pair in `h`.
+///.
+/// Uses the copy functions in `h` if they are not null to populate the `CaveKeyValue`'s in the returned `CaveVec`
+/// if they are present, and bitwise copies the appropreate bytes if they are not.
+CaveVec cave_hashmp_cpy_collect(CaveHashMap const* h, CaveError* err);
+
+/// \brief Returns a `CaveVec` with type `CaveKeyValue` that has had every element in `h` moved into it.
+///
+/// The move is done by bitwise copying every `CaveKeyValue` into the returned `CaveVec`, deleting it from `h`, but
+/// not calling it's destructor.
+CaveVec cave_hashmp_mv_collect(CaveHashMap* h, CaveError* err);
+
+/// \brief Calls `cave_hashmp_remove` on every element in `h`.
 CaveHashMap* cave_hashmp_clear(CaveHashMap* h, CaveError* err);
-
-/// \brief Removes every CaveKeyValue element in `h`, but does not call the destructor on the elements, or free `h`'s memory.
-CaveHashMap* cave_hashmp_clear_shallow(CaveHashMap* h, CaveError* err);
 
 CaveHashMap* cave_hashmp_rehash(CaveHashMap* h, size_t new_min_capacity, CaveError* err);
 
-size_t cave_hashmp_total_collisions(CaveHashMap* h);
+size_t cave_hashmp_total_collisions(CaveHashMap const * h);
 
-size_t cave_hashmp_max_collisions(CaveHashMap* h );
+/// \brief Finds the key with the most number of collisions, and returns how many collisions it has. If `key_dest` is
+/// not `NULL`, copies the key into `key_dest`.
+///
+/// If `h->key_cpy_fn` is `NULL`, then the copying into `key_dest` bitwise copies `h->key_size` number of bytes. If
+/// If `h->key_cpy_fn` is not `NULL`, then uses `h->key_cpy_fn` to copy the key into `key_dest`.
+size_t cave_hashmp_max_collisions(void* key_dest, CaveHashMap const * h, CaveError* err);
 
-//the following two functions perform shallow copies. If the keys or values being stored in the CaveHashMap are
-//pointers to an item allocated on the heap, or needs some custom copy function to be run, call the _custom versions
-//of these functions.
-CaveHashMap* cave_hashmp_cpy_assign_shallow(CaveHashMap* dest, CaveHashMap const * src, CaveError* err);
-CaveHashMap* cave_hashmp_cpy_assign_deep(CaveHashMap* dest, CaveHashMap const * src, CAVE_KV_CPY_FN cpy_fn, CaveError* err);
-
-CaveHashMap* cave_hashmp_cpy_init_shallow(CaveHashMap* dest, CaveHashMap const * src, CaveError* err);
-CaveHashMap* cave_hashmp_cpy_init_deep(CaveHashMap* dest, CaveHashMap const * src, CAVE_KV_CPY_FN cpy_fn, CaveError* err);
+CaveHashMap* cave_hashmp_cpy_assign(CaveHashMap* dest, CaveHashMap const * src, CaveError* err);
+CaveHashMap* cave_hashmp_cpy_init(CaveHashMap* dest, CaveHashMap const * src, CaveError* err);
 
 
 CaveHashMap* cave_hashmp_foreach(CaveHashMap * h, CAVE_FOREACH_CLOSURE fn, void* closure_data, CaveError* err);
 
+///@}
 
 #endif //CAVE_BEDROCK_H
