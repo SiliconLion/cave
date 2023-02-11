@@ -8,11 +8,22 @@
 extern "C" {
 #endif
 
+#include "cave-platform-info.h"
 #include "cave-error.h"
 #include <stdio.h>
 
 long cave_file_len(FILE* file);
 
+///This is lowkey terrible and I'll try to come up with something better at some point.
+#define CAVE_PLATFORM_SWITCH(statement_64_bit, statement_32_bit) \
+    if(CAVE_PLATFORM_64_BIT) {                                   \
+        statement_64_bit                                         \
+    } else if(CAVE_PLATFORM_32_BIT) {                            \
+        statement_32_bit                                         \
+    }
+
+
+#ifdef CAVE_PLATFORM_64_BIT
 
 #ifdef __cplusplus
 }

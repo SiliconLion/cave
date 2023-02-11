@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <strings.h>
 #include "cave-bedrock.h"
+#include "cave-utilities.h"
 
 
 // ><<         ><<><<<<<<<<    ><<
@@ -356,6 +357,88 @@ CaveVec* cave_vec_map(CaveVec* dest, CaveVec const* src, size_t output_stride, C
     *err = CAVE_NO_ERROR;
     return dest;
 }
+
+//   ><<     ><<      ><         ><< <<   ><<     ><<
+//   ><<     ><<     >< <<     ><<    ><< ><<     ><<
+//   ><<     ><<    ><  ><<     ><<       ><<     ><<
+//   ><<<<<< ><<   ><<   ><<      ><<     ><<<<<< ><<
+//   ><<     ><<  ><<<<<< ><<        ><<  ><<     ><<
+//   ><<     ><< ><<       ><< ><<    ><< ><<     ><<
+//   ><<     ><<><<         ><<  ><< <<   ><<     ><<
+
+//implimentation from https://stackoverflow.com/a/12996028/9178974
+uint32_t cave_hash_uint32(uint32_t x) {
+    x = ((x >> 16) ^ x) * 0x45d9f3b;
+    x = ((x >> 16) ^ x) * 0x45d9f3b;
+    x = (x >> 16) ^ x;
+    return x;
+}
+
+//implimentation from https://stackoverflow.com/a/12996028/9178974
+uint64_t cave_hash_uint64(uint64_t x) {
+    x = (x ^ (x >> 30)) * UINT64_C(0xbf58476d1ce4e5b9);
+    x = (x ^ (x >> 27)) * UINT64_C(0x94d049bb133111eb);
+    x = x ^ (x >> 31);
+    return x;
+}
+
+size_t cave_hash_sizet(size_t x) {
+    CAVE_PLATFORM_SWITCH(
+            return cave_hash_uint64(x); ,
+            return cave_hash_uint32(x);
+            )
+}
+
+const uint8_t ALTERNATING_U8 = 0xAA; // 10101010
+const uint32_t ALTERNATING_U16 = 0xAAAA; // 10101010_10101010
+const uint32_t ALTERNATING_U32 = 0xAAAAAAAA; // 10101010_10101010_10101010_10101010
+const uint64_t ALTERNATING_U64 = 0xAAAAAAAAAAAAAAAA; // 10101010_10101010_10101010_10101010_10101010_10101010_10101010_10101010
+
+
+size_t cave_hash_bytes(uint8_t const * bytes, size_t byte_count) {
+    size_t num_of_full_uint64s = byte_count / sizeof(uint64_t); // truncating division.
+    size_t bytes_left = byte_count % sizeof(uint64_t);
+
+    uint8_t const * last_full_uint64 = bytes + (num_of_full_uint64s * sizeof(uint64_t));
+
+    uint64_t accumulator = ALTERNATING_U64;
+
+    uint8_t const * curr_pos = bytes;
+    while(curr_pos <= last_full_uint64) {
+        uint64_t x = *(uint64_t*)curr_pos;
+        uint64_t x_hash = cave_hash_uint64(x);
+        accumulator ^= x_hash;
+
+        curr_pos += sizeof(uint64_t);
+    }
+
+    uint64_t remaining_bytes = 0;
+    curr_pos = last_full_uint64 + sizeof(uint64_t);
+    for(size_t i = 0; i < bytes_left; i++) {
+        remaining_bytes <<= 8;
+        uint8_t byte = *curr_pos;
+        remaining_bytes += (uint64_t)byte;
+    }
+
+
+    uint64_t bytes_to_uint64 = sizeof(uint64_t) - bytes_left;
+    for(size_t i = 0; i < bytes_to_uint64; i++) {
+        remaining_bytes <<= 8;
+        remaining_bytes += (uint64_t)ALTERNATING_U8;
+    }
+
+    uint64_t remaining_bytes_hash = cave_hash_uint64(remaining_bytes);
+    accumulator ^= remaining_bytes;
+
+    //if 32-bit machine, truncating downcast is fine.
+    // ToDo: find justification that it definetly truncates or make check for it. Seeing conflicted info.
+    return (size_t)cave_hash_uint64(accumulator);
+}
+
+size_t cave_hash_str(const char * bytes) {
+    return cave_hash_bytes( (uint8_t*)bytes, strlen(bytes));
+}
+
 
 
 //  ><<     ><<      ><         ><< <<  ><<     ><<    ><<       ><<      ><       ><<<<<<<

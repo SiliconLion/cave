@@ -5,7 +5,10 @@
 #ifndef CAVE_BEDROCK_H
 #define CAVE_BEDROCK_H
 
+#include "cave-platform-info.h"
+
 #include <stddef.h>
+#include <stdint.h>
 #include <stdbool.h>
 #include "cave-error.h"
 
@@ -354,6 +357,25 @@ CaveVec* cave_vec_map(CaveVec* dest, CaveVec const * src, size_t output_stride, 
  */
 
 
+//   ><<     ><<      ><         ><< <<   ><<     ><<
+//   ><<     ><<     >< <<     ><<    ><< ><<     ><<
+//   ><<     ><<    ><  ><<     ><<       ><<     ><<
+//   ><<<<<< ><<   ><<   ><<      ><<     ><<<<<< ><<
+//   ><<     ><<  ><<<<<< ><<        ><<  ><<     ><<
+//   ><<     ><< ><<       ><< ><<    ><< ><<     ><<
+//   ><<     ><<><<         ><<  ><< <<   ><<     ><<
+
+/// \defgroup CaveHash CaveHash
+///@{
+
+uint32_t cave_hash_uint32(uint32_t x);
+uint64_t cave_hash_uint64(uint64_t x);
+size_t cave_hash_sizet(size_t x);
+size_t cave_hash_bytes(uint8_t const * bytes, size_t byte_count);
+size_t cave_hash_str(const char * bytes);
+
+///@}
+
 //   ><<     ><<      ><         ><< <<   ><<     ><<    ><<       ><<      ><       ><<<<<<<
 //   ><<     ><<     >< <<     ><<    ><< ><<     ><<    >< ><<   ><<<     >< <<     ><<    ><<
 //   ><<     ><<    ><  ><<     ><<       ><<     ><<    ><< ><< > ><<    ><  ><<    ><<    ><<
@@ -412,14 +434,21 @@ typedef void (*CAVE_KV_DESTRUCT_FN)(CaveKeyValue* kv);
 
 /// \defgroup CaveHashMap-Default-Member-Fns CaveHashMap Default Member Functions
 /// @{
-#define DEF_CAVE_HASH_FN_DEFAULT(key_type) \
-    size_t cave_hash_fn_default_##key_type(void const * key) { \
-        return cave_hash_arbirary_bytes(key, sizeof(key_type)); \
-    }
 
-#define CAVE_HASH_FN_DEFAULT(key_type) \
-    (CAVE_HASH_FN)&cave_hash_fn_default_##key_type
+//#define DEF_CAVE_HASH_FN_DEFAULT(key_type) \
+//    size_t cave_hash_fn_default_##key_type(void const * key) { \
+//        return cave_hash_arbirary_bytes(key, sizeof(key_type)); \
+//    }
+//
+//#define CAVE_HASH_FN_DEFAULT(key_type) \
+//    (CAVE_HASH_FN)&cave_hash_fn_default_##key_type
 
+uint64_t hash(uint64_t x) {
+    x = (x ^ (x >> 30)) * UINT64_C(0xbf58476d1ce4e5b9);
+    x = (x ^ (x >> 27)) * UINT64_C(0x94d049bb133111eb);
+    x = x ^ (x >> 31);
+    return x;
+}
 
 //
 //#define DEF_CAVE_KEY_EQ_FN_DEFAULT(key_type) \
