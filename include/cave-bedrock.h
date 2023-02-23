@@ -368,10 +368,32 @@ CaveVec* cave_vec_map(CaveVec* dest, CaveVec const * src, size_t output_stride, 
 /// \defgroup CaveHash CaveHash
 ///@{
 
+/// `cave_hash_<type>` functions will always have a return value of `<type>`,
+/// whereas `cave_idx_hash_<type>` will always have a return type of `size_t`
+
+uint8_t  cave_hash_uint8(uint8_t x);
+uint16_t cave_hash_uint16(uint16_t x);
 uint32_t cave_hash_uint32(uint32_t x);
 uint64_t cave_hash_uint64(uint64_t x);
-size_t cave_hash_sizet(size_t x);
+size_t   cave_hash_sizet(size_t x);
+
+size_t cave_idx_hash_uint8(uint8_t x);
+size_t cave_idx_hash_uint16(uint16_t x);
+size_t cave_idx_hash_uint32(uint32_t x);
+size_t cave_idx_hash_uint64(uint64_t x);
+size_t cave_idx_hash_sizet(size_t x);
+
+
+
+/// \brief Takes an arbitrary number of bytes and hashes them into a size_t
+///
+/// \param bytes - pointer to bytes to hash. Undefined behavior is bytes is NULL.
+/// \param byte_count - number of bytes to hash. Must be greater than 0.
 size_t cave_hash_bytes(uint8_t const * bytes, size_t byte_count);
+
+/// \brief Takes a null-terminated string and hashes it.
+///
+/// \param bytes - the null terminated string,
 size_t cave_hash_str(const char * bytes);
 
 ///@}
@@ -443,12 +465,7 @@ typedef void (*CAVE_KV_DESTRUCT_FN)(CaveKeyValue* kv);
 //#define CAVE_HASH_FN_DEFAULT(key_type) \
 //    (CAVE_HASH_FN)&cave_hash_fn_default_##key_type
 
-uint64_t hash(uint64_t x) {
-    x = (x ^ (x >> 30)) * UINT64_C(0xbf58476d1ce4e5b9);
-    x = (x ^ (x >> 27)) * UINT64_C(0x94d049bb133111eb);
-    x = x ^ (x >> 31);
-    return x;
-}
+
 
 //
 //#define DEF_CAVE_KEY_EQ_FN_DEFAULT(key_type) \
@@ -545,11 +562,11 @@ CaveHashMap* cave_hashmap_remove(CaveHashMap* h, void const * key, CaveError* er
 /// `h->key_size` bytes into `dest->key`.
 /// If `h->value_cpy_fn` is not `NULL`, uses `h->value_cpy_fn` to copy the value into dest. Otherwise bitwise copies
 ///// `h->value_size` bytes into `dest->value`.
-CaveKeyValue* cave_hashmp_cpy_into(CaveKeyValue* dest, CaveHashMap * h, void const * key, CaveError* err);
+CaveKeyValue* cave_hashmp_cpy_kv_into(CaveKeyValue* dest, CaveHashMap * h, void const * key, CaveError* err);
 
 /// \brief Bitwise copies the `CaveKeyValue` corresponding to `key` into `dest`, then deletes it from `h`
 /// without calling the destructor. Reduces `h.count` by 1.
-CaveKeyValue* cave_hashmp_move_into(CaveKeyValue* dest, CaveHashMap* h, void const * key, CaveError* err);
+CaveKeyValue* cave_hashmp_move_kv_into(CaveKeyValue* dest, CaveHashMap* h, void const * key, CaveError* err);
 
 /// \brief Calls `cave_hashmp_remove` on every element in `h`.
 CaveHashMap* cave_hashmp_clear(CaveHashMap* h);

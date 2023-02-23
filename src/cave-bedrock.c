@@ -366,6 +366,39 @@ CaveVec* cave_vec_map(CaveVec* dest, CaveVec const* src, size_t output_stride, C
 //   ><<     ><< ><<       ><< ><<    ><< ><<     ><<
 //   ><<     ><<><<         ><<  ><< <<   ><<     ><<
 
+//uint8_t  cave_hash_uint8(uint8_t x) {
+//    uint32_t p = (uint32_t)x;
+//    p = (p << 8) + x;
+//    p = (p << 8) + x;
+//    p = (p << 8) + x;
+//
+//    uint32_t hash = cave_hash_uint32(x);
+//    //safe downcast
+//    return (uint8_t) (hash % UINT8_MAX)
+//}
+
+//uint16_t cave_hash_uint16(uint16_t x) {
+//    uint32_t p = (uint32_t)x;
+//    p = (p << 16) + x;
+//
+//    uint32_t hash = cave_hash_uint32(x);
+//    //safe downcast
+//    return (uint16_t) (hash % UINT16_MAX)
+//}
+
+uint8_t  cave_hash_uint8(uint8_t x) {
+    uint32_t hash = cave_hash_uint32(x);
+    //safe downcast
+    return (uint8_t) (hash % UINT8_MAX);
+}
+
+uint16_t cave_hash_uint16(uint16_t x) {
+    uint32_t hash = cave_hash_uint32(x);
+    //safe downcast
+    return (uint16_t) (hash % UINT16_MAX);
+}
+
+
 //implimentation from https://stackoverflow.com/a/12996028/9178974
 uint32_t cave_hash_uint32(uint32_t x) {
     x = ((x >> 16) ^ x) * 0x45d9f3b;
@@ -388,6 +421,25 @@ size_t cave_hash_sizet(size_t x) {
             return cave_hash_uint32(x);
             )
 }
+
+
+size_t cave_idx_hash_uint8(uint8_t x) {
+    return cave_hash_sizet( (size_t)x);
+}
+size_t cave_idx_hash_uint16(uint16_t x) {
+    return cave_hash_sizet( (size_t)x);
+}
+size_t cave_idx_hash_uint32(uint32_t x) {
+    return cave_hash_sizet( (size_t)x);
+}
+size_t cave_idx_hash_uint64(uint64_t x) {
+    return cave_hash_sizet( (size_t)x);
+}
+size_t cave_idx_hash_sizet(size_t x) {
+    return cave_hash_sizet( (size_t)x);
+}
+
+
 
 const uint8_t ALTERNATING_U8 = 0xAA; // 10101010
 const uint32_t ALTERNATING_U16 = 0xAAAA; // 10101010_10101010
@@ -479,6 +531,10 @@ static const size_t CavePrimeListLen = 51;
 //Copies `key` into `dest->key` using the `h->key_cpy_fn` if there is one, and memcpy if there is not.
 //If the `key_cpy_fn` returns an error, `*err` is set, and `NULL` is returned. Otherwise, h is returned.
 CaveHashMap* hidden_cave_hashmp_cpy_key_into(CaveHashMap* h, CaveKeyValue* dest, void const * key, CaveError* err) {
+    if(!h || !dest || !key) {
+        *err = CAVE_INVALID_ARGUMENT_ERROR;
+        return NULL;
+    }
     if (h->key_cpy_fn) {
         CaveError cpy_err = h->value_cpy_fn(dest->key, key);
         if (cpy_err != CAVE_NO_ERROR) {
@@ -496,6 +552,10 @@ CaveHashMap* hidden_cave_hashmp_cpy_key_into(CaveHashMap* h, CaveKeyValue* dest,
 //Copies `value` into `dest->value` using the `h->value_cpy_fn` if there is one, and memcpy if there is not.
 //If the `value_cpy_fn` returns an error, `*err` is set, and `NULL` is returned. Otherwise, h is returned.
 CaveHashMap* hidden_cave_hashmp_cpy_value_into(CaveHashMap* h, CaveKeyValue* dest, void const * value, CaveError* err) {
+    if(!h || !dest || !value) {
+        *err = CAVE_INVALID_ARGUMENT_ERROR;
+        return NULL;
+    }
     if (h->value_cpy_fn) {
         CaveError cpy_err = h->value_cpy_fn(dest->value, value);
         if (cpy_err != CAVE_NO_ERROR) {
@@ -577,6 +637,14 @@ CaveHashMap* cave_hashmp_init(
         CAVE_HASH_FN hash_fn,
         CaveError* err
 ) {
+    if(
+            !h || !hash_fn ||
+            value_size == 0 || key_size == 0
+    ) {
+        *err = CAVE_INVALID_ARGUMENT_ERROR;
+        return NULL;
+    }
+
     *err = CAVE_NO_ERROR;
 
     h->value_size = value_size;
@@ -666,6 +734,11 @@ void cave_hashmp_release(CaveHashMap* h) {
 
 
 CaveHashMap* cave_hashmp_insert(CaveHashMap* h, void const * key, void const * value, CaveError* err) {
+   if(!h || !key || !value) {
+       *err = CAVE_INVALID_ARGUMENT_ERROR;
+       return NULL;
+   }
+
     *err = CAVE_NO_ERROR;
 
     CaveKeyValue new_kv;
@@ -697,6 +770,11 @@ CaveHashMap* cave_hashmp_insert(CaveHashMap* h, void const * key, void const * v
 }
 
 CaveHashMap* cave_hashmp_update_or_insert(CaveHashMap* h, void const * key, void const * value, CaveError* err) {
+    if(!h || !key || !value) {
+        *err = CAVE_INVALID_ARGUMENT_ERROR;
+        return NULL;
+    }
+
     *err = CAVE_NO_ERROR;
     CaveVec* bucket = hidden_cave_hashmp_get_bucket(h, key);
     CaveKeyValue* existing_kv = hidden_cave_hashmp_key_in_bucket(h, bucket, key);
@@ -709,6 +787,11 @@ CaveHashMap* cave_hashmp_update_or_insert(CaveHashMap* h, void const * key, void
 
 
 void* cave_hashmp_at(CaveHashMap* h, void const * key, CaveError* err) {
+    if(!h || !key ) {
+        *err = CAVE_INVALID_ARGUMENT_ERROR;
+        return NULL;
+    }
+
     *err = CAVE_NO_ERROR;
     CaveVec* bucket = hidden_cave_hashmp_get_bucket(h, key);
     CaveKeyValue* kv = hidden_cave_hashmp_key_in_bucket(h, bucket, key);
@@ -721,6 +804,11 @@ void* cave_hashmp_at(CaveHashMap* h, void const * key, CaveError* err) {
 }
 
 CaveHashMap* cave_hashmap_remove(CaveHashMap* h, void const * key, CaveError* err) {
+    if(!h || !key ) {
+        *err = CAVE_INVALID_ARGUMENT_ERROR;
+        return NULL;
+    }
+
     CaveVec* bucket = hidden_cave_hashmp_get_bucket(h, key);
     size_t kv_index;
     if(!hidden_cave_hashmp_kv_index_from_key(&kv_index, h, bucket, key) ) {
@@ -735,7 +823,12 @@ CaveHashMap* cave_hashmap_remove(CaveHashMap* h, void const * key, CaveError* er
     return h;
 }
 
-CaveKeyValue* cave_hashmp_cpy_into(CaveKeyValue* dest, CaveHashMap * h, void const * key, CaveError* err) {
+CaveKeyValue* cave_hashmp_cpy_kv_into(CaveKeyValue* dest, CaveHashMap * h, void const * key, CaveError* err) {
+    if(!dest || !h || !key) {
+        *err = CAVE_INVALID_ARGUMENT_ERROR;
+        return NULL;
+    }
+
     *err = CAVE_NO_ERROR;
     CaveVec* bucket = hidden_cave_hashmp_get_bucket(h, key);
     CaveKeyValue* kv = hidden_cave_hashmp_key_in_bucket(h, bucket, key);
@@ -750,7 +843,12 @@ CaveKeyValue* cave_hashmp_cpy_into(CaveKeyValue* dest, CaveHashMap * h, void con
     }
 }
 
-CaveKeyValue* cave_hashmp_move_into(CaveKeyValue* dest, CaveHashMap* h, void const * key, CaveError* err) {
+CaveKeyValue* cave_hashmp_move_kv_into(CaveKeyValue* dest, CaveHashMap* h, void const * key, CaveError* err) {
+    if(!dest || !h || !key) {
+        *err = CAVE_INVALID_ARGUMENT_ERROR;
+        return NULL;
+    }
+
     CaveVec* bucket = hidden_cave_hashmp_get_bucket(h, key);
     size_t kv_index;
     if(!hidden_cave_hashmp_kv_index_from_key(&kv_index, h, bucket, key)) {
@@ -791,6 +889,11 @@ CaveHashMap* cave_hashmp_clear(CaveHashMap* h) {
 }
 
 CaveVec cave_hashmp_cpy_collect(CaveHashMap * h, CaveError* err) {
+    if(!h) {
+        *err = CAVE_INVALID_ARGUMENT_ERROR;
+        //Todo: add "ZERO_VEC constant/macro?
+        return (CaveVec) {.data = NULL, .stride = 0, .capacity = 0, .len = 0};
+    }
     CaveVec v;
     cave_vec_init(&v, sizeof(CaveKeyValue), h->count, err);
     if(*err != CAVE_NO_ERROR) {
@@ -822,6 +925,12 @@ CaveVec cave_hashmp_cpy_collect(CaveHashMap * h, CaveError* err) {
 
 
 CaveVec cave_hashmp_mv_collect(CaveHashMap* h, CaveError* err) {
+    if(!h) {
+        *err = CAVE_INVALID_ARGUMENT_ERROR;
+        //Todo: add "ZERO_VEC constant/macro?
+        return (CaveVec) {.data = NULL, .stride = 0, .capacity = 0, .len = 0};
+    }
+
     CaveVec v;
     cave_vec_init(&v, sizeof(CaveKeyValue), h->count, err);
     if(*err != CAVE_NO_ERROR) {
@@ -849,6 +958,11 @@ CaveVec cave_hashmp_mv_collect(CaveHashMap* h, CaveError* err) {
 }
 
 CaveHashMap* cave_hashmp_foreach(CaveHashMap * h, CAVE_FOREACH_CLOSURE fn, void* closure_data, CaveError* err) {
+   if(!h || !fn ) {
+       *err = CAVE_INVALID_ARGUMENT_ERROR;
+       return NULL;
+   }
+
     *err = CAVE_NO_ERROR;
     for(size_t i = 0; i < h->occupied_buckets.len; i++) {
         size_t bucket_index = *(size_t*)cave_vec_at_unchecked(&h->occupied_buckets, i);
@@ -900,6 +1014,11 @@ CaveHashMap* cave_hashmp_foreach(CaveHashMap * h, CAVE_FOREACH_CLOSURE fn, void*
 //}
 
 CaveHashMap* cave_hashmp_rehash(CaveHashMap* h, size_t new_min_capacity, CaveError* err) {
+    if(!h) {
+        *err = CAVE_INVALID_ARGUMENT_ERROR;
+        return NULL;
+    }
+
     if(new_min_capacity == 0) {
         new_min_capacity = h->capacity + 1;
     }
@@ -1035,6 +1154,11 @@ void hidden_cave_hashmp_insert_wrapper(CaveKeyValue* element, CaveHashMap* h, Ca
 }
 
 CaveHashMap* cave_hashmp_cpy_assign(CaveHashMap* dest, CaveHashMap * src, CaveError* err) {
+    if(!dest || !src) {
+        *err = CAVE_INVALID_ARGUMENT_ERROR;
+        return NULL;
+    }
+
     *err = CAVE_NO_ERROR;
     bool compatible =
             src->key_size == dest->key_size &&
@@ -1056,6 +1180,11 @@ CaveHashMap* cave_hashmp_cpy_assign(CaveHashMap* dest, CaveHashMap * src, CaveEr
 }
 
 CaveHashMap* cave_hashmp_cpy_init(CaveHashMap* dest, CaveHashMap * src, CaveError* err) {
+    if(!dest || !src) {
+        *err = CAVE_INVALID_ARGUMENT_ERROR;
+        return NULL;
+    }
+
     cave_hashmp_init(
             dest,
             src->value_size,
