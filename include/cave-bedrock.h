@@ -369,7 +369,8 @@ CaveVec* cave_vec_map(CaveVec* dest, CaveVec const * src, size_t output_stride, 
 ///@{
 
 /// `cave_hash_<type>` functions will always have a return value of `<type>`,
-/// whereas `cave_idx_hash_<type>` will always have a return type of `size_t`
+/// whereas `cave_idx_hash_<type>` will always have a return type of `size_t`, and
+/// have a type signature that is easily cast-able to `CAVE_HASH_FN`.
 
 uint8_t  cave_hash_uint8(uint8_t x);
 uint16_t cave_hash_uint16(uint16_t x);
@@ -377,11 +378,11 @@ uint32_t cave_hash_uint32(uint32_t x);
 uint64_t cave_hash_uint64(uint64_t x);
 size_t   cave_hash_sizet(size_t x);
 
-size_t cave_idx_hash_uint8(uint8_t x);
-size_t cave_idx_hash_uint16(uint16_t x);
-size_t cave_idx_hash_uint32(uint32_t x);
-size_t cave_idx_hash_uint64(uint64_t x);
-size_t cave_idx_hash_sizet(size_t x);
+size_t cave_idx_hash_uint8(uint8_t const * x);
+size_t cave_idx_hash_uint16(uint16_t const * x);
+size_t cave_idx_hash_uint32(uint32_t const * x);
+size_t cave_idx_hash_uint64(uint64_t const * x);
+size_t cave_idx_hash_sizet(size_t const * x);
 
 
 
@@ -453,32 +454,6 @@ typedef CaveError (*CAVE_KEY_CPY_FN)(CaveKeyValue* dest_key, CaveKeyValue const*
 typedef CaveError (*CAVE_VALUE_CPY_FN)(CaveKeyValue* dest, CaveKeyValue const* src);
 
 typedef void (*CAVE_KV_DESTRUCT_FN)(CaveKeyValue* kv);
-
-/// \defgroup CaveHashMap-Default-Member-Fns CaveHashMap Default Member Functions
-/// @{
-
-//#define DEF_CAVE_HASH_FN_DEFAULT(key_type) \
-//    size_t cave_hash_fn_default_##key_type(void const * key) { \
-//        return cave_hash_arbirary_bytes(key, sizeof(key_type)); \
-//    }
-//
-//#define CAVE_HASH_FN_DEFAULT(key_type) \
-//    (CAVE_HASH_FN)&cave_hash_fn_default_##key_type
-
-
-
-//
-//#define DEF_CAVE_KEY_EQ_FN_DEFAULT(key_type) \
-//
-//#define DEF_CAVE_KV_CPY_DEFAULT(key_type, value_type) \
-//
-//#define CAVE_KEY_EQ_FN_DEFAULT(key_type) \
-
-//#define CAVE_KV_CPY_DEFAULT(key_type, value_type) \
-
-
-//end of CaveHashMap-Default-Member-Fns
-/// @}
 
 //end of CaveHashMap-Member-Function-Types
 /// @}
