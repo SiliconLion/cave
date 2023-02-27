@@ -4,6 +4,7 @@
 
 #ifndef CAVE_UTILITES_H
 #define CAVE_UTILITES_H
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -23,7 +24,6 @@ long cave_file_len(FILE* file);
     }
 
 
-#ifdef CAVE_PLATFORM_64_BIT
 
 #ifdef __cplusplus
 }

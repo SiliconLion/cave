@@ -422,8 +422,6 @@ typedef struct CaveKeyValue {
     void* value;
 } CaveKeyValue;
 
-/// \brief Helper function to compute a hash on arbitrary contiguous data.
-size_t cave_hash_arbirary_bytes(void const * key, size_t byte_count);
 
 ///\defgroup CaveHashMap-Member-Function-Types CaveHashMap Member Function Types
 ///@{

@@ -8,9 +8,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-//#include <string.h>
-//#include <inttypes.h>
-//#include <stdlib.h>
+#include <time.h>
+
+
+// ><<         ><<><<<<<<<<    ><<
+//  ><<       ><< ><<       ><<   ><<
+//   ><<     ><<  ><<      ><<
+//    ><<   ><<   ><<<<<<  ><<
+//     ><< ><<    ><<      ><<
+//      ><<<<     ><<       ><<   ><<
+//       ><<      ><<<<<<<<   ><<<<
 
 
 CaveError cave_vec_init_test() {
@@ -1039,9 +1046,242 @@ CaveError cave_vec_map_test() {
     return CAVE_NO_ERROR;
 }
 
+
+//   ><<     ><<      ><         ><< <<   ><<     ><<
+//   ><<     ><<     >< <<     ><<    ><< ><<     ><<
+//   ><<     ><<    ><  ><<     ><<       ><<     ><<
+//   ><<<<<< ><<   ><<   ><<      ><<     ><<<<<< ><<
+//   ><<     ><<  ><<<<<< ><<        ><<  ><<     ><<
+//   ><<     ><< ><<       ><< ><<    ><< ><<     ><<
+//   ><<     ><<><<         ><<  ><< <<   ><<     ><<
+
+
+CaveError cave_hash_uint8_test() {
+    size_t bit_counts[8] = {0};
+
+    uint8_t x;
+    for(size_t i = 0; i < 20000000; i++) {
+        //ToDo: clang-tidy is yelling at me that rand has limited randomness.
+        x = (uint8_t)rand();
+        uint8_t hash = cave_hash_uint8(x);
+
+
+        //for every bit in hash, increment the coresponding bit_count by 1.
+        for(size_t j = 0; j < 8; j++) {
+            uint8_t mask = 1 << j;
+            if ( (hash & mask) > 0 ) {
+                bit_counts[j] += 1;
+            }
+        }
+    }
+
+    printf("the bitcounts for cave_has_uint8_test() are:\n");
+    for(size_t i = 0; i < 8; i++) {
+        printf("%zu , ", bit_counts[i]);
+    }
+    printf("\n");
+
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hash_uint16_test() {
+    size_t bit_counts[16] = {0};
+
+    uint16_t x;
+    for(size_t i = 0; i < 20000000; i++) {
+        //ToDo: clang-tidy is yelling at me that rand has limited randomness.
+        x = (uint16_t)rand();
+        uint16_t hash = cave_hash_uint16(x);
+
+
+        //for every bit in hash, increment the coresponding bit_count by 1.
+        for(size_t j = 0; j < 16; j++) {
+            uint16_t mask = 1 << j;
+            if ( (hash & mask) > 0 ) {
+                bit_counts[j] += 1;
+            }
+        }
+    }
+
+    printf("the bitcounts for cave_has_uint16_test() are:\n");
+    for(size_t i = 0; i < 16; i++) {
+        printf("%zu , ", bit_counts[i]);
+    }
+    printf("\n");
+
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hash_uint32_test() {
+    size_t bit_counts[32] = {0};
+
+    uint32_t x;
+    for(size_t i = 0; i < 20000000; i++) {
+        //ToDo: clang-tidy is yelling at me that rand has limited randomness.
+        x = (uint32_t)rand();
+        uint32_t hash = cave_hash_uint32(x);
+
+
+        //for every bit in hash, increment the coresponding bit_count by 1.
+        for(size_t j = 0; j < 32; j++) {
+            uint32_t mask = 1 << j;
+            if ( (hash & mask) > 0 ) {
+                bit_counts[j] += 1;
+            }
+        }
+    }
+
+    printf("the bitcounts for cave_has_uint32_test() are:\n");
+    for(size_t i = 0; i < 32; i++) {
+        printf("%zu , ", bit_counts[i]);
+    }
+    printf("\n");
+
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hash_uint64_test() {
+    size_t bit_counts[64] = {0};
+
+    uint64_t x;
+    for(size_t i = 0; i < 20000000; i++) {
+        //ToDo: clang-tidy is yelling at me that rand has limited randomness.
+        //together these two lines initalize 64 random bits
+        x = (uint64_t)rand();
+        x = (x<<32) + (uint64_t)rand();
+
+        uint64_t hash = cave_hash_uint64(x);
+
+
+        //for every bit in hash, increment the coresponding bit_count by 1.
+        for(size_t j = 0; j < 64; j++) {
+            uint64_t mask = 1 << j;
+            if ( (hash & mask) > 0 ) {
+                bit_counts[j] += 1;
+            }
+        }
+    }
+
+    printf("the bitcounts for cave_has_uint64_test() are:\n");
+    for(size_t i = 0; i < 64; i++) {
+        printf("%zu , ", bit_counts[i]);
+    }
+    printf("\n");
+
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hash_bytes_test() {
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hash_str_test() {
+    return CAVE_DATA_ERROR;
+}
+
+
+
+//  ><<     ><<      ><         ><< <<  ><<     ><<    ><<       ><<      ><       ><<<<<<<
+//  ><<     ><<     >< <<     ><<    ><<><<     ><<    >< ><<   ><<<     >< <<     ><<    ><<
+//  ><<     ><<    ><  ><<     ><<      ><<     ><<    ><< ><< > ><<    ><  ><<    ><<    ><<
+//  ><<<<<< ><<   ><<   ><<      ><<    ><<<<<< ><<    ><<  ><<  ><<   ><<   ><<   ><<<<<<<
+//  ><<     ><<  ><<<<<< ><<        ><< ><<     ><<    ><<   ><  ><<  ><<<<<< ><<  ><<
+//  ><<     ><< ><<       ><< ><<    ><<><<     ><<    ><<       ><< ><<       ><< ><<
+//  ><<     ><<><<         ><<  ><< <<  ><<     ><<    ><<       ><<><<         ><<><<
+
+CaveError cave_hashmp_init_test() {
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hashmp_set_key_eq_fn_test() {
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hashmp_set_key_cpy_test() {
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hashmp_set_value_cpy_test() {
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hashmp_kv_destructor_test() {
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hashmp_insert_test() {
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hashmp_update_or_insert_test() {
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hashmp_at_test() {
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hashmp_remove_test() {
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hashmp_cpy_kv_into_test() {
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hashmp_move_kv_into_test() {
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hashmp_clear_test() {
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hashmp_cpy_collect_test() {
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hashmp_mv_collect_test() {
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hashmp_rehash_test() {
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hashmp_total_collisions_test() {
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hashmp_max_collisions_test() {
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hashmp_cpy_assign_test() {
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hashmp_cpy_init_test() {
+    return CAVE_DATA_ERROR;
+}
+
+CaveError cave_hashmp_foreach_test() {
+    return CAVE_DATA_ERROR;
+}
+
+
+
+
 int main(int argc, char* argv[]) {
+
+//initialize things the rest of the tests will use
+
+    //time_t's are so annoying.
+    srand(time(NULL));
+
     int test_fails = 0;
 
+//Vec Tests
     RUN_TEST(cave_vec_init_test, test_fails);
     RUN_TEST(cave_vec_reserve_test, test_fails);
     RUN_TEST(cave_vec_shrink_test, test_fails);
@@ -1058,6 +1298,35 @@ int main(int argc, char* argv[]) {
     RUN_TEST(cave_vec_filter_test, test_fails);
     RUN_TEST(cave_vec_map_test, test_fails);
 
+//Hash Tests
+    RUN_TEST(cave_hash_uint8_test, test_fails);
+    RUN_TEST(cave_hash_uint16_test, test_fails);
+    RUN_TEST(cave_hash_uint32_test, test_fails);
+    RUN_TEST(cave_hash_uint64_test, test_fails);
+    RUN_TEST(cave_hash_bytes_test, test_fails);
+    RUN_TEST(cave_hash_str_test, test_fails);
+
+//HashMap Tests
+    RUN_TEST(cave_hashmp_init_test, test_fails);
+    RUN_TEST(cave_hashmp_set_key_eq_fn_test, test_fails);
+    RUN_TEST(cave_hashmp_set_key_cpy_test, test_fails);
+    RUN_TEST(cave_hashmp_set_value_cpy_test, test_fails);
+    RUN_TEST(cave_hashmp_kv_destructor_test, test_fails);
+    RUN_TEST(cave_hashmp_insert_test, test_fails);
+    RUN_TEST(cave_hashmp_update_or_insert_test, test_fails);
+    RUN_TEST(cave_hashmp_at_test, test_fails);
+    RUN_TEST(cave_hashmp_remove_test, test_fails);
+    RUN_TEST(cave_hashmp_cpy_kv_into_test, test_fails);
+    RUN_TEST(cave_hashmp_move_kv_into_test, test_fails);
+    RUN_TEST(cave_hashmp_clear_test, test_fails);
+    RUN_TEST(cave_hashmp_cpy_collect_test, test_fails);
+    RUN_TEST(cave_hashmp_mv_collect_test, test_fails);
+    RUN_TEST(cave_hashmp_rehash_test, test_fails);
+    RUN_TEST(cave_hashmp_total_collisions_test, test_fails);
+    RUN_TEST(cave_hashmp_max_collisions_test, test_fails);
+    RUN_TEST(cave_hashmp_cpy_assign_test, test_fails);
+    RUN_TEST(cave_hashmp_cpy_init_test, test_fails);
+    RUN_TEST(cave_hashmp_foreach_test, test_fails);
 
     return test_fails;
 }

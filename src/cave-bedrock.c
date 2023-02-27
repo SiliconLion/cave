@@ -423,20 +423,20 @@ size_t cave_hash_sizet(size_t x) {
 }
 
 
-size_t cave_idx_hash_uint8(uint8_t x) {
-    return cave_hash_sizet( (size_t)x);
+size_t cave_idx_hash_uint8(uint8_t const * x) {
+    return cave_hash_sizet( (size_t)*x);
 }
-size_t cave_idx_hash_uint16(uint16_t x) {
-    return cave_hash_sizet( (size_t)x);
+size_t cave_idx_hash_uint16(uint16_t const * x) {
+    return cave_hash_sizet( (size_t)*x);
 }
-size_t cave_idx_hash_uint32(uint32_t x) {
-    return cave_hash_sizet( (size_t)x);
+size_t cave_idx_hash_uint32(uint32_t const * x) {
+    return cave_hash_sizet( (size_t)*x);
 }
-size_t cave_idx_hash_uint64(uint64_t x) {
-    return cave_hash_sizet( (size_t)x);
+size_t cave_idx_hash_uint64(uint64_t const * x) {
+    return cave_hash_sizet( (size_t)*x);
 }
-size_t cave_idx_hash_sizet(size_t x) {
-    return cave_hash_sizet( (size_t)x);
+size_t cave_idx_hash_sizet(size_t const * x) {
+    return cave_hash_sizet( (size_t)*x);
 }
 
 
