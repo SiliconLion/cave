@@ -132,6 +132,20 @@ CaveVec* cave_vec_push(CaveVec* v, void const* element, CaveError* err);
 /// a `cave_vec` function call.
 void* cave_vec_at(CaveVec const* v, size_t index, CaveError* err);
 
+/// \brief The way to access and modify an element of the vector without bounds checking.
+///
+/// Just a wrapper over `v->data + (v->stride * index)` .
+/// Obviously memory issues abound if `index` is greater than `v->len - 1`.
+///
+/// \param v - The target vector.
+/// \param index - the index of the object to retrive. Must be between 0 and `v->len - 1`. 
+/// \return A pointer to the element at `index`. You may read from and write to this pointer.
+/// However, as many `cave_vec` functions reallocate, this pointer may become invalidated across
+/// a `cave_vec` function call.
+static inline void* cave_vec_at_unchecked(CaveVec* v, size_t index) {
+    return v->data + (v->stride * index);
+}
+
 /// \brief Copies `element` into the index specified.
 ///
 /// Shifts all the elements at or after index over by 1, reallocating if necessary,

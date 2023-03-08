@@ -108,6 +108,10 @@ void* cave_vec_at(CaveVec const* v, size_t index, CaveError* err) {
     return v->data + (v->stride * index);
 }
 
+// void* cave_vec_at_unchecked(CaveVec* v, size_t index) {
+//     return v->data + (v->stride * index);
+// }
+
 CaveVec* cave_vec_add_at(CaveVec* v, void const* element, size_t index, CaveError* err) {
     if(!v || !element) {
         *err = CAVE_DATA_ERROR;
