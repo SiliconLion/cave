@@ -318,6 +318,30 @@ CaveError cave_vec_at_test() {
     return CAVE_NO_ERROR;
 }
 
+CaveError cave_vec_add_at_unchecked_test() {
+    CaveError err = CAVE_NO_ERROR;
+    CaveVec v;
+    cave_vec_init(&v, sizeof(size_t), 10000, &err);
+    if(err != CAVE_NO_ERROR) {
+        return err;
+    }
+
+    for(size_t i = 0; i < 10000; i++) {
+        cave_vec_push(&v, &i, &err);
+        if(err != CAVE_NO_ERROR) {
+            return err;
+        }
+    }
+
+    for(size_t i = 0; i < v.len; i++) {
+        size_t element = *(size_t*)cave_vec_at_unchecked(&v, i);
+        if(element != i) {
+            return CAVE_DATA_ERROR;
+        }
+    }
+    return CAVE_NO_ERROR;
+}
+
 CaveError cave_vec_add_at_test() {
     CaveError err = CAVE_NO_ERROR;
     CaveVec v1;
@@ -1287,6 +1311,7 @@ int main(int argc, char* argv[]) {
     RUN_TEST(cave_vec_shrink_test, test_fails);
     RUN_TEST(cave_vec_push_test, test_fails);
     RUN_TEST(cave_vec_at_test, test_fails);
+    RUN_TEST(cave_vec_add_at_unchecked_test, test_fails);
     RUN_TEST(cave_vec_add_at_test, test_fails);
     RUN_TEST(cave_vec_end_test, test_fails);
     RUN_TEST(cave_vec_pop_test, test_fails);
