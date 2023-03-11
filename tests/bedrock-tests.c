@@ -1214,7 +1214,44 @@ CaveError cave_hash_str_test() {
 //  ><<     ><<><<         ><<  ><< <<  ><<     ><<    ><<       ><<><<         ><<><<
 
 CaveError cave_hashmp_init_test() {
-    return CAVE_DATA_ERROR;
+    CaveError err = CAVE_NO_ERROR;
+    CaveHashMap h1;
+    cave_hashmp_init(
+            &h1,
+            sizeof(uint32_t),
+            sizeof(uint64_t),
+            256,
+            (CAVE_HASH_FN) &cave_idx_hash_uint32,
+            &err
+            );
+
+    if(err != CAVE_NO_ERROR) {
+        return CAVE_DATA_ERROR;
+    }
+
+    bool correct = true;
+    correct &=
+            h1.count == 0 &&
+            h1.capacity >= 256 &&
+            h1.key_size == sizeof(uint32_t) &&
+            h1.value_size == sizeof(uint64_t) &&
+            h1.hash_fn == (CAVE_HASH_FN)&cave_idx_hash_uint32 &&
+            h1.key_eq_fn == NULL &&
+            h1.key_cpy_fn == NULL &&
+            h1.value_cpy_fn == NULL &&
+            h1.kv_destructor == NULL;
+
+    correct &=
+            h1.buckets.len == h1.capacity &&
+            h1.buckets.stride == sizeof(CaveVec) &&
+            h1.occupied_buckets.len == 0 &&
+            h1.occupied_buckets.stride == sizeof(size_t);
+
+    if(!correct) {
+        return CAVE_DATA_ERROR;
+    }
+    //TODO: test more edge cases, eg, 0's and NULL's
+    return CAVE_NO_ERROR;
 }
 
 CaveError cave_hashmp_set_key_eq_fn_test() {
@@ -1234,7 +1271,68 @@ CaveError cave_hashmp_kv_destructor_test() {
 }
 
 CaveError cave_hashmp_insert_test() {
-    return CAVE_DATA_ERROR;
+    CaveError err = CAVE_NO_ERROR;
+    CaveHashMap h1;
+    cave_hashmp_init(
+            &h1,
+            sizeof(uint32_t),
+            sizeof(uint64_t),
+            256,
+            (CAVE_HASH_FN) &cave_idx_hash_uint32,
+            &err
+    );
+
+    for(uint32_t i = 0; i < 1000; i++) {
+        uint64_t value = (uint64_t)(i) * 2;
+        cave_hashmp_insert(&h1, &i, &value, &err);
+        if(err != CAVE_NO_ERROR) {
+            return err;
+        }
+    }
+
+    if(h1.count != 1000) {
+        return CAVE_DATA_ERROR;
+    }
+
+    size_t total_elements = 0;
+    CaveVec occupied_buckets;
+    cave_vec_init(&occupied_buckets, sizeof(size_t), 256, &err);
+    if(err != CAVE_NO_ERROR) {return CAVE_INSUFFICIENT_MEMORY_ERROR;}
+
+    for(size_t i = 0; i < h1.buckets.len; i++) {
+        CaveVec* bucket = cave_vec_at_unchecked(&h1.buckets, i);
+        if(bucket->len > 0) {
+            total_elements += bucket->len;
+            cave_vec_push(&occupied_buckets, &i, &err);
+            if(err != CAVE_NO_ERROR) {return CAVE_INSUFFICIENT_MEMORY_ERROR;}
+        }
+    }
+
+    if(total_elements != h1.count) {
+        return CAVE_DATA_ERROR;
+    }
+
+    if(occupied_buckets.len != h1.occupied_buckets.len) {
+        return CAVE_INDEX_ERROR;
+    }
+
+    //ToDo: uncomment when CaveVec has sorting
+    // CaveVec h1_occu_buckets_cpy; 
+    // cave_vec_cpy_init(&h1_occu_buckets_cpy, &h1.occupied_buckets, &err);
+    // if(err != CAVE_NO_ERROR) {return CAVE_INSUFFICIENT_MEMORY_ERROR;}
+    // cave_vec_sort(&occupied_buckets, (CAVE_SORT_FN)cave_sizet_sort);
+    // cave_vec_sort(&h1_occu_buckets_cpy, (CAVE_SORT_FN)cave_sizet_sort);
+    // for(size_t i = 0; i < occupied_buckets.len; i++) {
+    //     size_t a = *(size_t*)cave_vec_at_unchecked(&occupied_buckets, i);
+    //     size_t b = *(size_t*)cave_vec_at_unchecked(&h1_occu_buckets_cpy, i);
+    //     if(a != b) {
+    //         return CAVE_INDEX_ERROR;
+    //     }
+    // }
+
+
+
+    return CAVE_NO_ERROR;
 }
 
 CaveError cave_hashmp_update_or_insert_test() {

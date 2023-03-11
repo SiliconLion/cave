@@ -487,8 +487,8 @@ typedef struct CaveHashMap {
 
 CaveHashMap* cave_hashmp_init(
         CaveHashMap* h,
-        size_t value_size,
         size_t key_size,
+        size_t value_size,
         size_t min_capacity,
         CAVE_HASH_FN hash_fn,
         CaveError* err

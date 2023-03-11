@@ -531,7 +531,7 @@ static const size_t CavePrimeListLen = 51;
 //Copies `key` into `dest->key` using the `h->key_cpy_fn` if there is one, and memcpy if there is not.
 //If the `key_cpy_fn` returns an error, `*err` is set, and `NULL` is returned. Otherwise, h is returned.
 CaveHashMap* hidden_cave_hashmp_cpy_key_into(CaveHashMap* h, CaveKeyValue* dest, void const * key, CaveError* err) {
-    if(!h || !dest || !key) {
+    if(!h || !dest || !dest->key || !key) {
         *err = CAVE_INVALID_ARGUMENT_ERROR;
         return NULL;
     }
@@ -606,6 +606,11 @@ bool hidden_cave_hashmp_kv_index_from_key(size_t* dest, CaveHashMap* h, CaveVec*
     return false;
 }
 
+size_t hidden_cave_get_bucket_index_from_key(CaveHashMap* h, void const * key) {
+    size_t hash = h->hash_fn(key);
+    return hash % h->capacity;
+}
+
 CaveVec* hidden_cave_hashmp_get_bucket(CaveHashMap const * h, void const * key) {
     size_t hash = h->hash_fn(key);
     size_t bucket_index = hash % h->capacity;
@@ -631,8 +636,8 @@ void cave_simple_free_kv(CaveKeyValue kv) {
 
 CaveHashMap* cave_hashmp_init(
         CaveHashMap* h,
-        size_t value_size,
         size_t key_size,
+        size_t value_size,
         size_t min_capacity,
         CAVE_HASH_FN hash_fn,
         CaveError* err
@@ -749,21 +754,22 @@ CaveHashMap* cave_hashmp_insert(CaveHashMap* h, void const * key, void const * v
         return NULL;
     }
 
-    if(!hidden_cave_hashmp_cpy_key_into(h, new_kv.key, key, err)) {
+    if(!hidden_cave_hashmp_cpy_key_into(h, &new_kv, key, err)) {
         *err = CAVE_COPY_ERROR;
         return NULL;
     }
 
-    if(!hidden_cave_hashmp_cpy_value_into(h, new_kv.value, value, err)) {
+    if(!hidden_cave_hashmp_cpy_value_into(h, &new_kv, value, err)) {
         *err = CAVE_COPY_ERROR;
         return NULL;
     }
 
-    CaveVec* bucket = hidden_cave_hashmp_get_bucket(h, key);
+    size_t bucket_index = hidden_cave_get_bucket_index_from_key(h, key);
+    CaveVec* bucket = cave_vec_at_unchecked(&h->buckets, bucket_index);
     cave_vec_push(bucket, &new_kv, err);
-    if(*err != CAVE_NO_ERROR) {
-        return NULL;
-    }
+    if(*err != CAVE_NO_ERROR) { return NULL; }
+    cave_vec_push(&h->occupied_buckets, &bucket_index, err);
+    if(*err != CAVE_NO_ERROR) { return NULL; }
 
     h->count += 1;
     return h;
@@ -954,7 +960,7 @@ CaveVec cave_hashmp_mv_collect(CaveHashMap* h, CaveError* err) {
                     );
         }
     }
-
+    return v;
 }
 
 CaveHashMap* cave_hashmp_foreach(CaveHashMap * h, CAVE_FOREACH_CLOSURE fn, void* closure_data, CaveError* err) {
