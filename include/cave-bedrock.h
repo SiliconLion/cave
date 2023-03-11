@@ -478,10 +478,6 @@ typedef struct CaveHashMap {
     CAVE_KV_DESTRUCT_FN kv_destructor;
     /// A CaveVec<CaveVec<CaveKeyValue>>
     CaveVec buckets;
-    /// A CaveVec<size_t>
-    /// Contains list of indexes of buckets that are occupied.
-    /// ie, all i such that buckets[i].len != 0.
-    CaveVec occupied_buckets;
 } CaveHashMap;
 
 

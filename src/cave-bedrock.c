@@ -611,7 +611,7 @@ size_t hidden_cave_get_bucket_index_from_key(CaveHashMap* h, void const * key) {
     return hash % h->capacity;
 }
 
-CaveVec* hidden_cave_hashmp_get_bucket(CaveHashMap const * h, void const * key) {
+CaveVec* hidden_cave_hashmp_get_bucket(CaveHashMap * h, void const * key) {
     size_t hash = h->hash_fn(key);
     size_t bucket_index = hash % h->capacity;
     return cave_vec_at_unchecked(&h->buckets, bucket_index);
@@ -701,13 +701,6 @@ CaveHashMap* cave_hashmp_init(
         }
     }
 
-    //ToDo:
-    //arguably there's a more intelligent default capacity to pick, but not obviously to me
-    //what that should be, and trying to keep memory overhead low. Perhaps 75% of capacity?
-    cave_vec_init(&h->occupied_buckets, sizeof(size_t), 0, err);
-    if(*err != CAVE_NO_ERROR) {
-        return NULL;
-    }
     return h;
 }
 
@@ -734,7 +727,6 @@ void cave_hashmp_release(CaveHashMap* h) {
         cave_vec_release(bucket);
     }
     cave_vec_release(&h->buckets);
-    cave_vec_release(&h->occupied_buckets);
 }
 
 
@@ -767,8 +759,6 @@ CaveHashMap* cave_hashmp_insert(CaveHashMap* h, void const * key, void const * v
     size_t bucket_index = hidden_cave_get_bucket_index_from_key(h, key);
     CaveVec* bucket = cave_vec_at_unchecked(&h->buckets, bucket_index);
     cave_vec_push(bucket, &new_kv, err);
-    if(*err != CAVE_NO_ERROR) { return NULL; }
-    cave_vec_push(&h->occupied_buckets, &bucket_index, err);
     if(*err != CAVE_NO_ERROR) { return NULL; }
 
     h->count += 1;
@@ -876,9 +866,8 @@ CaveKeyValue* cave_hashmp_move_kv_into(CaveKeyValue* dest, CaveHashMap* h, void 
 
 CaveHashMap* cave_hashmp_clear(CaveHashMap* h) {
     CaveError err = CAVE_NO_ERROR;
-    for(size_t i = 0; i < h->occupied_buckets.len; i++) {
-        size_t bucket_index = *(size_t*)cave_vec_at_unchecked(&h->occupied_buckets, i);
-        CaveVec* bucket = cave_vec_at_unchecked(&h->buckets, bucket_index);
+    for(size_t i = 0; i < h->buckets.len; i++) {
+        CaveVec* bucket = cave_vec_at_unchecked(&h->buckets, i);
         for(size_t j = 0; j < bucket->len; j++) {
             CaveKeyValue* kv = (CaveKeyValue*)cave_vec_at_unchecked(bucket, j);
             hidden_cave_destuct_kv(h, kv);
@@ -888,8 +877,6 @@ CaveHashMap* cave_hashmp_clear(CaveHashMap* h) {
         //bucket is not null, so no need to error check.
         cave_vec_clear(bucket, &err);
     }
-    //paramaters are not null, so no need to error check.
-    cave_vec_clear(&h->occupied_buckets, &err);
     h->count = 0;
     return h;
 }
@@ -906,9 +893,8 @@ CaveVec cave_hashmp_cpy_collect(CaveHashMap * h, CaveError* err) {
         return v; //Gotta return something. *shrug*.
     }
 
-    for(size_t i = 0; i < h->occupied_buckets.len; i++) {
-        size_t bucket_index = *(size_t*)cave_vec_at_unchecked(&h->occupied_buckets, i);
-        CaveVec* bucket = cave_vec_at_unchecked(&h->buckets, bucket_index);
+    for(size_t i = 0; i < h->buckets.len; i++) {
+        CaveVec* bucket = cave_vec_at_unchecked(&h->buckets, i);
         for(size_t j = 0; j < bucket->len; j++) {
             CaveKeyValue* kv = cave_vec_at_unchecked(bucket, j);
             CaveKeyValue kv_cpy;
@@ -943,9 +929,8 @@ CaveVec cave_hashmp_mv_collect(CaveHashMap* h, CaveError* err) {
         return v; //Gotta return something. *shrug*.
     }
 
-    for(size_t i = 0; i < h->occupied_buckets.len; i++) {
-        size_t bucket_index = *(size_t*)cave_vec_at_unchecked(&h->occupied_buckets, i);
-        CaveVec* bucket = cave_vec_at_unchecked(&h->buckets, bucket_index);
+    for(size_t i = 0; i < h->buckets.len; i++) {
+        CaveVec* bucket = cave_vec_at_unchecked(&h->buckets, i);
         while(bucket->len > 0) {
             CaveVec kv;
             //todo: maybe add an add_uninitalized fn that just incriments the count of v??
@@ -961,6 +946,8 @@ CaveVec cave_hashmp_mv_collect(CaveHashMap* h, CaveError* err) {
         }
     }
     return v;
+
+
 }
 
 CaveHashMap* cave_hashmp_foreach(CaveHashMap * h, CAVE_FOREACH_CLOSURE fn, void* closure_data, CaveError* err) {
@@ -970,9 +957,8 @@ CaveHashMap* cave_hashmp_foreach(CaveHashMap * h, CAVE_FOREACH_CLOSURE fn, void*
    }
 
     *err = CAVE_NO_ERROR;
-    for(size_t i = 0; i < h->occupied_buckets.len; i++) {
-        size_t bucket_index = *(size_t*)cave_vec_at_unchecked(&h->occupied_buckets, i);
-        CaveVec* bucket = cave_vec_at_unchecked(&h->occupied_buckets, bucket_index);
+    for(size_t i = 0; i < h->buckets.len; i++) {
+        CaveVec* bucket = cave_vec_at_unchecked(&h->buckets, i);
         CaveVec* ret = cave_vec_foreach(
                 bucket,
                 fn,
@@ -1065,7 +1051,7 @@ CaveHashMap* cave_hashmp_rehash(CaveHashMap* h, size_t new_min_capacity, CaveErr
 
     //recalculates the hash of each CaveKeyValue in each bucket, finds what bucket index that becomes
     //in the new_buckets, and memcpy's it into that new bucket
-    for(size_t i = 0; i < h->occupied_buckets.len; i++) {
+    for(size_t i = 0; i < h->buckets.len; i++) {
         CaveVec* old_bucket = cave_vec_at_unchecked(&h->buckets, i);
 
         for(size_t j = 0; j < old_bucket->len; j++) {
@@ -1082,37 +1068,15 @@ CaveHashMap* cave_hashmp_rehash(CaveHashMap* h, size_t new_min_capacity, CaveErr
         }
     }
 
-    //initializes a new version of occupied_buckets based on the new_buckets.
-    //kinda annoying to make a new vec when we "could" just write over the old occupied_buckets vec.
-    //but then if we run out of memory while doing that, then that would invalidate h, which we don't want to
-    //do.
-    CaveVec new_occupied_buckets;
-    cave_vec_init(&new_occupied_buckets, sizeof(size_t), 0, err);
-    if(*err != CAVE_NO_ERROR) {
-        goto ERROR_CLEANUP_NEWBUCKETS;
-    }
-    for(size_t i = 0; i < new_capacity; i++) {
-        CaveVec* bucket = cave_vec_at_unchecked(&new_buckets, i);
-        if(bucket->len != 0) {
-            cave_vec_push(&new_occupied_buckets, &i, err);
-            if(*err != CAVE_NO_ERROR) {
-                goto ERROR_CLEANUP_NEWOCCUPIEDBUCKETS;
-            }
-        }
-    }
+
 
     cave_vec_release(&h->buckets);
-    cave_vec_clear(&h->occupied_buckets, err); //occupied buckets is not null so not checking error
 
     h->buckets = new_buckets;
-    h->occupied_buckets = new_occupied_buckets;
     h->capacity = new_capacity;
     return h;
 
     //Error handling
-
-    ERROR_CLEANUP_NEWOCCUPIEDBUCKETS:
-    cave_vec_release(&new_occupied_buckets);
     ERROR_CLEANUP_NEWBUCKETS:
     for(size_t i = 0; i < new_buckets.len; i++) {
         CaveVec* b = cave_vec_at_unchecked(&new_buckets, i);
@@ -1124,9 +1088,8 @@ CaveHashMap* cave_hashmp_rehash(CaveHashMap* h, size_t new_min_capacity, CaveErr
 
 size_t cave_hashmp_total_collisions(CaveHashMap * h) {
     size_t collisions = 0;
-    for(size_t i = 0; i < h->occupied_buckets.len; i++) {
-        size_t bucket_index = *(size_t*)cave_vec_at_unchecked(&h->occupied_buckets, i);
-        CaveVec* bucket = cave_vec_at_unchecked(&h->buckets, bucket_index);
+    for(size_t i = 0; i < h->buckets.len; i++) {
+        CaveVec* bucket = cave_vec_at_unchecked(&h->buckets, i);
         collisions += bucket->len;
     }
     return collisions;
@@ -1135,9 +1098,8 @@ size_t cave_hashmp_total_collisions(CaveHashMap * h) {
 size_t cave_hashmp_max_collisions(CaveHashMap * h, void* key_dest, CaveError* err) {
     size_t max_collisions = 0;
     CaveVec* bucket_with_max_collisions = NULL;
-    for(size_t i = 0; i < h->occupied_buckets.len; i++) {
-        size_t bucket_index = *(size_t*)cave_vec_at_unchecked(&h->occupied_buckets, i);
-        CaveVec* bucket = cave_vec_at_unchecked(&h->buckets, bucket_index);
+    for(size_t i = 0; i < h->buckets.len; i++) {
+        CaveVec* bucket = cave_vec_at_unchecked(&h->buckets, i);
         if(bucket->len > max_collisions) {
             max_collisions = bucket->len;
             bucket_with_max_collisions = bucket;
@@ -1193,8 +1155,8 @@ CaveHashMap* cave_hashmp_cpy_init(CaveHashMap* dest, CaveHashMap * src, CaveErro
 
     cave_hashmp_init(
             dest,
-            src->value_size,
             src->key_size,
+            src->value_size,
             src->capacity,
             src->hash_fn,
             err

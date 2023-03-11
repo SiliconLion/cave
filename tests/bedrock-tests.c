@@ -1243,9 +1243,7 @@ CaveError cave_hashmp_init_test() {
 
     correct &=
             h1.buckets.len == h1.capacity &&
-            h1.buckets.stride == sizeof(CaveVec) &&
-            h1.occupied_buckets.len == 0 &&
-            h1.occupied_buckets.stride == sizeof(size_t);
+            h1.buckets.stride == sizeof(CaveVec);
 
     if(!correct) {
         return CAVE_DATA_ERROR;
@@ -1295,15 +1293,10 @@ CaveError cave_hashmp_insert_test() {
     }
 
     size_t total_elements = 0;
-    CaveVec occupied_buckets;
-    cave_vec_init(&occupied_buckets, sizeof(size_t), 256, &err);
-    if(err != CAVE_NO_ERROR) {return CAVE_INSUFFICIENT_MEMORY_ERROR;}
-
     for(size_t i = 0; i < h1.buckets.len; i++) {
         CaveVec* bucket = cave_vec_at_unchecked(&h1.buckets, i);
         if(bucket->len > 0) {
             total_elements += bucket->len;
-            cave_vec_push(&occupied_buckets, &i, &err);
             if(err != CAVE_NO_ERROR) {return CAVE_INSUFFICIENT_MEMORY_ERROR;}
         }
     }
@@ -1311,27 +1304,6 @@ CaveError cave_hashmp_insert_test() {
     if(total_elements != h1.count) {
         return CAVE_DATA_ERROR;
     }
-
-    if(occupied_buckets.len != h1.occupied_buckets.len) {
-        return CAVE_INDEX_ERROR;
-    }
-
-    //ToDo: uncomment when CaveVec has sorting
-    // CaveVec h1_occu_buckets_cpy; 
-    // cave_vec_cpy_init(&h1_occu_buckets_cpy, &h1.occupied_buckets, &err);
-    // if(err != CAVE_NO_ERROR) {return CAVE_INSUFFICIENT_MEMORY_ERROR;}
-    // cave_vec_sort(&occupied_buckets, (CAVE_SORT_FN)cave_sizet_sort);
-    // cave_vec_sort(&h1_occu_buckets_cpy, (CAVE_SORT_FN)cave_sizet_sort);
-    // for(size_t i = 0; i < occupied_buckets.len; i++) {
-    //     size_t a = *(size_t*)cave_vec_at_unchecked(&occupied_buckets, i);
-    //     size_t b = *(size_t*)cave_vec_at_unchecked(&h1_occu_buckets_cpy, i);
-    //     if(a != b) {
-    //         return CAVE_INDEX_ERROR;
-    //     }
-    // }
-
-
-
     return CAVE_NO_ERROR;
 }
 
