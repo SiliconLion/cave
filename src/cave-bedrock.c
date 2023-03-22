@@ -422,25 +422,6 @@ size_t cave_hash_sizet(size_t x) {
             )
 }
 
-
-size_t cave_idx_hash_uint8(uint8_t const * x) {
-    return cave_hash_sizet( (size_t)*x);
-}
-size_t cave_idx_hash_uint16(uint16_t const * x) {
-    return cave_hash_sizet( (size_t)*x);
-}
-size_t cave_idx_hash_uint32(uint32_t const * x) {
-    return cave_hash_sizet( (size_t)*x);
-}
-size_t cave_idx_hash_uint64(uint64_t const * x) {
-    return cave_hash_sizet( (size_t)*x);
-}
-size_t cave_idx_hash_sizet(size_t const * x) {
-    return cave_hash_sizet( (size_t)*x);
-}
-
-
-
 const uint8_t ALTERNATING_U8 = 0xAA; // 10101010
 const uint32_t ALTERNATING_U16 = 0xAAAA; // 10101010_10101010
 const uint32_t ALTERNATING_U32 = 0xAAAAAAAA; // 10101010_10101010_10101010_10101010
@@ -491,7 +472,24 @@ size_t cave_hash_str(const char * bytes) {
     return cave_hash_bytes( (uint8_t*)bytes, strlen(bytes));
 }
 
-
+size_t cave_idx_hash_uint8(uint8_t const * key) {
+    return cave_hash_sizet( (size_t)*key);
+}
+size_t cave_idx_hash_uint16(uint16_t const * key) {
+    return cave_hash_sizet( (size_t)*key);
+}
+size_t cave_idx_hash_uint32(uint32_t const * key) {
+    return cave_hash_sizet( (size_t)*key);
+}
+size_t cave_idx_hash_uint64(uint64_t const * key) {
+    return cave_hash_sizet( (size_t)*key);
+}
+size_t cave_idx_hash_sizet(size_t const * key) {
+    return cave_hash_sizet( (size_t)*key);
+}
+size_t cave_idx_hash_str(char const ** key) {
+    return cave_hash_str(*key);
+}
 
 //  ><<     ><<      ><         ><< <<  ><<     ><<    ><<       ><<      ><       ><<<<<<<
 //  ><<     ><<     >< <<     ><<    ><<><<     ><<    >< ><<   ><<<     >< <<     ><<    ><<
@@ -500,6 +498,42 @@ size_t cave_hash_str(const char * bytes) {
 //  ><<     ><<  ><<<<<< ><<        ><< ><<     ><<    ><<   ><  ><<  ><<<<<< ><<  ><<
 //  ><<     ><< ><<       ><< ><<    ><<><<     ><<    ><<       ><< ><<       ><< ><<
 //  ><<     ><<><<         ><<  ><< <<  ><<     ><<    ><<       ><<><<         ><<><<
+
+CaveError cave_kv_str_key_cpy(char ** const dest_key, char const * const * key) {
+    *dest_key = malloc(strlen( *key) * sizeof(char));
+    if(!*dest_key) {
+        return CAVE_INSUFFICIENT_MEMORY_ERROR;
+    }
+    strcpy(*dest_key, *key);
+    return CAVE_NO_ERROR;
+}
+
+CaveError cave_kv_str_value_cpy(char ** const dest_value, char const * const *value) {
+    *dest_value = malloc(strlen( *value) * sizeof(char));
+    if(!*dest_value) {
+        return CAVE_INSUFFICIENT_MEMORY_ERROR;
+    }
+    strcpy(*dest_value, *value);
+    return CAVE_NO_ERROR;
+}
+
+bool cave_kv_str_key_eq(char const * const * key_a, char const * const * key_b) {
+    int ret = strcmp(*key_a, *key_b);
+    if(ret == 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+void cave_kv_str_str_destruct(CaveKeyValue* kv) {
+    //kv->key is a void* to a char*, therefore we must free both.
+    free( *(char**)kv->key );
+    free(kv->key);
+    //kv->value is a void* to a char*, therefore we must free both.
+    free( *(char**)kv->value );
+    free(kv->value);
+}
 
 
 
@@ -536,7 +570,7 @@ CaveHashMap* hidden_cave_hashmp_cpy_key_into(CaveHashMap* h, CaveKeyValue* dest,
         return NULL;
     }
     if (h->key_cpy_fn) {
-        CaveError cpy_err = h->value_cpy_fn(dest->key, key);
+        CaveError cpy_err = h->key_cpy_fn(dest->key, key);
         if (cpy_err != CAVE_NO_ERROR) {
             *err = cpy_err;
             return NULL;
@@ -628,10 +662,6 @@ CaveKeyValue* hidden_cave_hashmp_key_in_bucket(CaveHashMap* h, CaveVec* bucket, 
     return NULL;
 }
 
-void cave_simple_free_kv(CaveKeyValue kv) {
-    free(kv.key);
-    free(kv.value);
-}
 
 
 CaveHashMap* cave_hashmp_init(
@@ -832,11 +862,12 @@ CaveKeyValue* cave_hashmp_cpy_kv_into(CaveKeyValue* dest, CaveHashMap * h, void 
         *err = CAVE_MISSING_KEY_ERROR;
         return NULL;
     }
-    hidden_cave_hashmp_cpy_key_into(h, dest, kv->key, err);
-    hidden_cave_hashmp_cpy_value_into(h, dest, kv->value, err);
+    hidden_cave_hashmp_cpy_key_into(h, dest, &kv->key, err);
+    hidden_cave_hashmp_cpy_value_into(h, dest, &kv->value, err);
     if(*err != CAVE_NO_ERROR) {
         return NULL;
     }
+    return dest;
 }
 
 CaveKeyValue* cave_hashmp_move_kv_into(CaveKeyValue* dest, CaveHashMap* h, void const * key, CaveError* err) {
@@ -890,7 +921,7 @@ CaveVec cave_hashmp_cpy_collect(CaveHashMap * h, CaveError* err) {
     CaveVec v;
     cave_vec_init(&v, sizeof(CaveKeyValue), h->count, err);
     if(*err != CAVE_NO_ERROR) {
-        return v; //Gotta return something. *shrug*.
+        return (CaveVec) {.data = NULL, .stride = 0, .capacity = 0, .len = 0};;
     }
 
     for(size_t i = 0; i < h->buckets.len; i++) {
@@ -898,20 +929,35 @@ CaveVec cave_hashmp_cpy_collect(CaveHashMap * h, CaveError* err) {
         for(size_t j = 0; j < bucket->len; j++) {
             CaveKeyValue* kv = cave_vec_at_unchecked(bucket, j);
             CaveKeyValue kv_cpy;
+            kv_cpy.key = malloc(h->key_size);
+            kv_cpy.value = malloc(h->value_size);
+            if(!kv_cpy.key || !kv_cpy.value) {
+                *err = CAVE_INSUFFICIENT_MEMORY_ERROR;
+                goto HANDLE_ERROR;
+            }
+
             hidden_cave_hashmp_cpy_key_into(h, &kv_cpy, kv->key, err);
             if(*err != CAVE_NO_ERROR) {
-                return v; //Gotta return something. *shrug*.
+                goto HANDLE_ERROR;
             }
-            hidden_cave_hashmp_cpy_key_into(h, &kv_cpy, kv->value, err);
+            hidden_cave_hashmp_cpy_value_into(h, &kv_cpy, kv->value, err);
             if(*err != CAVE_NO_ERROR) {
-                return v; //Gotta return something. *shrug*.
+                goto HANDLE_ERROR;
             }
+
             cave_vec_push(&v, &kv_cpy, err);
             if(*err != CAVE_NO_ERROR) {
-                return v; //Gotta return something. *shrug*.
+                goto HANDLE_ERROR;
             }
         }
     }
+    return v;
+
+    HANDLE_ERROR:
+    //ToDo/MustDo: for now we are just returning `v`, but may choose to
+    //call h->kv_destructor on every key-value pair in v, in which case,
+    // the zero vec would be returned.
+    // will decide which is better before writing the final docs to this function
     return v;
 }
 

@@ -14,6 +14,9 @@ const char* cave_error_string(CaveError e) {
         case CAVE_INDEX_ERROR: {
             return "CAVE_INDEX_ERROR";
         }
+        case CAVE_COUNT_ERROR: {
+            return "CAVE_COUNT_ERROR";
+        }
         case CAVE_MISSING_KEY_ERROR: {
             return "CAVE_MISSING_KEY_ERROR";
         }
@@ -25,6 +28,9 @@ const char* cave_error_string(CaveError e) {
         }
         case CAVE_TYPE_ERROR: {
             return "CAVE_TYPE_ERROR";
+        }
+        case CAVE_INVALID_ARGUMENT_ERROR: {
+            return "CAVE_INVALID_ARGUMENT_ERROR";
         }
         case CAVE_UNKNOWN_ERROR: {
             return "CAVE_UNKNOWN_ERROR";

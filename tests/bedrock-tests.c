@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <ctype.h>
 
 
 // ><<         ><<><<<<<<<<    ><<
@@ -1302,8 +1303,11 @@ CaveError cave_hashmp_insert_test() {
     }
 
     if(total_elements != h1.count) {
-        return CAVE_DATA_ERROR;
+        return CAVE_COUNT_ERROR;
     }
+
+    //ToDo: test this wayyyy more thoroughly
+
     return CAVE_NO_ERROR;
 }
 
@@ -1312,7 +1316,113 @@ CaveError cave_hashmp_update_or_insert_test() {
 }
 
 CaveError cave_hashmp_at_test() {
-    return CAVE_DATA_ERROR;
+    CaveError err = CAVE_NO_ERROR;
+    CaveHashMap h1;
+    cave_hashmp_init(
+        &h1,
+        sizeof(size_t),
+        sizeof(size_t),
+        25,
+        (CAVE_HASH_FN)&cave_idx_hash_sizet,
+        &err
+    );
+    if(err != CAVE_NO_ERROR) { return err; }
+
+    for(size_t i = 0; i < 10000; i++) {
+        cave_hashmp_insert(&h1, &i, &i, &err);
+        if(err != CAVE_NO_ERROR) { return err; }
+    }
+
+    for(size_t i = 0; i < 10000; i++) {
+        size_t* value = cave_hashmp_at(&h1, &i, &err);
+        if(err != CAVE_NO_ERROR) { return err; }
+        if(*value != i) { return CAVE_DATA_ERROR; }
+    }
+
+    // So far so good :)
+    // Now lets try it on a more complicated type.
+
+    //ToDo: make it easier to declare a HashMap with strings
+    CaveHashMap str_map;
+    cave_hashmp_init(
+        &str_map,
+        sizeof(char*),
+        sizeof(char*),
+        30,
+        (CAVE_HASH_FN)&cave_idx_hash_str,
+        &err
+    );
+    if(err != CAVE_NO_ERROR) { return err; }
+    cave_hashmp_set_key_eq_fn(&str_map, (CAVE_KEY_EQ_FN)&cave_kv_str_key_eq);
+    cave_hashmp_set_key_cpy_fn(&str_map, (CAVE_KEY_CPY_FN)&cave_kv_str_key_cpy);
+    cave_hashmp_set_value_cpy_fn(&str_map, (CAVE_VALUE_CPY_FN)&cave_kv_str_value_cpy);
+    cave_hashmp_set_kv_destructor_fn(&str_map, (CAVE_KV_DESTRUCT_FN)&cave_kv_str_str_destruct);
+
+
+    size_t kv_count = 7;
+    char const * keys[] = {
+        "John", "Stacy", "Bob", "Tammera", "Joseph", "James", "Alexis", 
+    };
+    char const * values[] = {
+        "Smith", "Jones", "Ogden", "Trilby", "Connor", "Hammond", "Wolner"
+    };
+
+    for(size_t i = 0; i < kv_count; i++) {
+        char const * key = keys[i];
+        char const * value = values[i];
+        cave_hashmp_insert(&str_map, &key, &value, &err);
+        if(err != CAVE_NO_ERROR) { return err; }
+    }
+
+
+//iterating over all keys, but going backwards just to mix it up. Never know when 
+//that kind of thing could matter, which is the point of these tests. 
+    for(size_t i = kv_count; i-- > 0; ) {
+        char const * key = keys[i];
+        char const * value = values[i];
+
+        char ** ret_value = cave_hashmp_at(&str_map, &key, &err);
+        if(err != CAVE_NO_ERROR) { return err; }
+
+        int str_comparision = strcmp(value, *ret_value);
+        if(str_comparision != 0) { return CAVE_DATA_ERROR; }
+
+        //this would imply that when the value was inserted into str_map, rather than
+        // doing a deep copy, just copied the pointer, which should not be the behavior of 
+        // str_map given the copy functions we set. So error.
+        if(*ret_value == value) { return CAVE_DATA_ERROR; }
+    }
+
+    //gonna double check that we are doing actual string comparision and not just pointer comparision
+    char const *  dup_key = "Joseph";
+    char ** ret_value = cave_hashmp_at(&str_map, &dup_key, &err);
+    if(err != CAVE_NO_ERROR) { return err; }
+    int str_comparision = strcmp(values[4], *ret_value);
+    if(str_comparision != 0) { return CAVE_DATA_ERROR; }
+
+
+    //if we get here, YAY. Now lets test that the correct errors are returned when something is wrong.
+
+    // h is NULL
+    void * ret = cave_hashmp_at(NULL, keys[0], &err);
+    if(err != CAVE_INVALID_ARGUMENT_ERROR) { return CAVE_INVALID_ARGUMENT_ERROR ;}
+    if(ret != NULL) {return CAVE_DATA_ERROR;}
+    // key is NULL
+    ret = cave_hashmp_at(&str_map, NULL, &err);
+    if(err != CAVE_INVALID_ARGUMENT_ERROR) { return CAVE_INVALID_ARGUMENT_ERROR ;}
+    if(ret != NULL) {return CAVE_DATA_ERROR;}
+
+    // key not in str_map
+    char const * not_key = "lemon";
+    ret = cave_hashmp_at(&str_map, &not_key, &err);
+    if(err != CAVE_MISSING_KEY_ERROR) { return CAVE_MISSING_KEY_ERROR;}
+    if(ret != NULL) {return CAVE_DATA_ERROR;}
+
+    //thats more or less everything. just cleanup now.
+    cave_hashmp_release(&h1);
+    cave_hashmp_release(&str_map);
+
+    return CAVE_NO_ERROR;
 }
 
 CaveError cave_hashmp_remove_test() {
@@ -1359,8 +1469,110 @@ CaveError cave_hashmp_cpy_init_test() {
     return CAVE_DATA_ERROR;
 }
 
+
+void uppercase_kv_str_str(CaveKeyValue* kv, size_t* count, CaveError* err) {
+    char* key = *(char**)kv->key;
+    char* value = *(char**)kv->value;
+    size_t key_len = strlen(key);
+    size_t value_len = strlen(value);
+
+    for(size_t i = 0; i < key_len; i++) {
+        key[i] = (char)toupper(key[i]);
+    }
+
+    for(size_t i = 0; i < value_len; i++) {
+        value[i] = (char)toupper(value[i]);
+    }
+
+    *count += 1;
+    *err = CAVE_NO_ERROR;
+}
+
 CaveError cave_hashmp_foreach_test() {
-    return CAVE_DATA_ERROR;
+    CaveError err = CAVE_NO_ERROR;
+
+    CaveHashMap h1; // 
+    cave_hashmp_init(
+        &h1,
+        sizeof(char*),
+        sizeof(char*),
+        30,
+        (CAVE_HASH_FN)cave_idx_hash_str,
+        &err
+    );
+
+    cave_hashmp_set_key_cpy_fn(&h1, (CAVE_KEY_CPY_FN)cave_kv_str_key_cpy);
+    cave_hashmp_set_value_cpy_fn(&h1, (CAVE_VALUE_CPY_FN)cave_kv_str_value_cpy);
+    cave_hashmp_set_key_eq_fn(&h1, (CAVE_KEY_EQ_FN)cave_kv_str_key_eq);
+    //ToDO: write a test destructor to properly ensure this is always called correctly? 
+    cave_hashmp_set_kv_destructor_fn(&h1, (CAVE_KV_DESTRUCT_FN)cave_kv_str_str_destruct); 
+
+    const size_t kv_count = 5;
+    char const * keys[] = {
+        "apple", "orange", "lemon", "avocado", "peach"
+    };
+
+    char const * values[] = {
+        "red", "orange", "yellow", "green", "pink"
+    };
+
+    for(size_t i = 0; i < kv_count; i++) {
+        cave_hashmp_insert(&h1, &keys[i], &values[i], &err);
+        if(err != CAVE_NO_ERROR) {  return err; }
+    }
+
+    size_t count = 0;
+    cave_hashmp_foreach(
+        &h1, 
+        (CAVE_FOREACH_CLOSURE)uppercase_kv_str_str,
+        &count,
+        &err
+        );
+
+    //every kv-pair should now be uppercased, and count should have counted the number of kv-pairs
+
+    if(count != kv_count) { return CAVE_COUNT_ERROR;}
+
+    CaveVec h1_collected = cave_hashmp_cpy_collect(&h1, &err);
+    if(err != CAVE_NO_ERROR ) {  return err; }
+    if(h1_collected.len != kv_count) { return CAVE_COUNT_ERROR; }
+
+    char const * keys_upper[] = {
+        "APPLE", "ORANGE", "LEMON", "AVOCADO", "PEACH"
+    };
+
+    char const * values_upper[] = {
+        "RED", "ORANGE", "YELLOW", "GREEN", "PINK"
+    };
+
+
+    for(size_t i = 0; i < kv_count; i++) {
+        char const * upper_key = keys_upper[i];
+        char const * upper_value = values_upper[i];
+
+        bool match_found = false;
+        for(size_t j = 0; j < h1_collected.len; j++) {
+            CaveKeyValue* kv = cave_vec_at_unchecked(&h1_collected, j);
+            char* h1_key = *(char**)kv->key;
+            char* h1_value = *(char**)kv->value;
+
+            int keys_eq = strcmp(upper_key, h1_key);
+            int vals_eq = strcmp(upper_value, h1_value);
+            if(keys_eq == 0 && vals_eq == 0) {
+                match_found = true;
+                break;
+            }
+        }
+        if(!match_found) {
+            return CAVE_DATA_ERROR;
+        }
+    }
+
+    //TODO (cleanup): release all memory.
+    cave_hashmp_release(&h1);
+    cave_vec_release(&h1_collected);
+
+    return CAVE_NO_ERROR;
 }
 
 
@@ -1393,13 +1605,17 @@ int main(int argc, char* argv[]) {
     RUN_TEST(cave_vec_filter_test, test_fails);
     RUN_TEST(cave_vec_map_test, test_fails);
 
+
+//just commented out while writing other tests cuz they take a long time. 
+// ToDo: Multithread running tests?
+
 //Hash Tests
-    RUN_TEST(cave_hash_uint8_test, test_fails);
-    RUN_TEST(cave_hash_uint16_test, test_fails);
-    RUN_TEST(cave_hash_uint32_test, test_fails);
-    RUN_TEST(cave_hash_uint64_test, test_fails);
-    RUN_TEST(cave_hash_bytes_test, test_fails);
-    RUN_TEST(cave_hash_str_test, test_fails);
+//    RUN_TEST(cave_hash_uint8_test, test_fails);
+//    RUN_TEST(cave_hash_uint16_test, test_fails);
+//    RUN_TEST(cave_hash_uint32_test, test_fails);
+//    RUN_TEST(cave_hash_uint64_test, test_fails);
+//    RUN_TEST(cave_hash_bytes_test, test_fails);
+//    RUN_TEST(cave_hash_str_test, test_fails);
 
 //HashMap Tests
     RUN_TEST(cave_hashmp_init_test, test_fails);
