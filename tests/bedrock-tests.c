@@ -4,12 +4,14 @@
 
 #include "cave-error.h"
 #include "cave-bedrock.h"
+#include "cave-utilities.h"
 #include "test-utilities.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <ctype.h>
+#include <inttypes.h>
 
 
 // ><<         ><<><<<<<<<<    ><<
@@ -1081,126 +1083,131 @@ CaveError cave_vec_map_test() {
 //   ><<     ><<><<         ><<  ><< <<   ><<     ><<
 
 
-CaveError cave_hash_uint8_test() {
-    size_t bit_counts[8] = {0};
+CaveError cave_hash_uint8_test(const char* rel_output_dir) {
+    size_t total_size = 10000000;
+    size_t buff_len = 100000;
+    //total_size and buff_len are liable to get fiddled with, so feels prudent to add this check
+    if(total_size % buff_len != 0) {return CAVE_INDEX_ERROR; }
+    //Just noting that this is a VLA, which there is some reason to be ambivalent about
+    uint8_t buffer[buff_len];
 
-    uint8_t x;
-    for(size_t i = 0; i < 20000000; i++) {
-        //ToDo: clang-tidy is yelling at me that rand has limited randomness.
-        x = (uint8_t)rand();
-        uint8_t hash = cave_hash_uint8(x);
+    char * out_file_name = cave_str_combine_unchecked(rel_output_dir, "/cave_hash_uint8_test.csv");
+    FILE* out_file = fopen(out_file_name, "w");
 
-
-        //for every bit in hash, increment the coresponding bit_count by 1.
-        for(size_t j = 0; j < 8; j++) {
-            uint8_t mask = 1 << j;
-            if ( (hash & mask) > 0 ) {
-                bit_counts[j] += 1;
-            }
+    for(size_t i = 0; i < total_size / buff_len; i++) {
+        for(size_t j = 0; j < buff_len; j++) {
+            //ToDo: clang-tidy is yelling at me that rand has limited randomness.
+            uint8_t x = (uint8_t)rand();
+            buffer[j] = cave_hash_uint8(x);
+        }
+        for(size_t j = 0; j < buff_len; j++) {
+            fprintf(out_file, "%" PRIu8 ",", buffer[j]);
         }
     }
 
-    printf("the bitcounts for cave_has_uint8_test() are:\n");
-    for(size_t i = 0; i < 8; i++) {
-        printf("%zu , ", bit_counts[i]);
-    }
-    printf("\n");
+    fprintf(out_file, "\n");
 
-    return CAVE_DATA_ERROR;
+    fclose(out_file);
+    free(out_file_name);
+
+    return CAVE_NO_ERROR;
 }
 
-CaveError cave_hash_uint16_test() {
-    size_t bit_counts[16] = {0};
+CaveError cave_hash_uint16_test(const char* rel_output_dir) {
+    size_t total_size = 10000000;
+    size_t buff_len = 100000;
+    //total_size and buff_len are liable to get fiddled with, so feels prudent to add this check
+    if(total_size % buff_len != 0) {return CAVE_INDEX_ERROR; }
+    //Just noting that this is a VLA, which there is some reason to be ambivalent about
+    uint8_t buffer[buff_len];
 
-    uint16_t x;
-    for(size_t i = 0; i < 20000000; i++) {
-        //ToDo: clang-tidy is yelling at me that rand has limited randomness.
-        x = (uint16_t)rand();
-        uint16_t hash = cave_hash_uint16(x);
+    char * out_file_name = cave_str_combine_unchecked(rel_output_dir, "/cave_hash_uint16_test.csv");
+    FILE* out_file = fopen(out_file_name, "w");
 
-
-        //for every bit in hash, increment the coresponding bit_count by 1.
-        for(size_t j = 0; j < 16; j++) {
-            uint16_t mask = 1 << j;
-            if ( (hash & mask) > 0 ) {
-                bit_counts[j] += 1;
-            }
+    for(size_t i = 0; i < total_size / buff_len; i++) {
+        for(size_t j = 0; j < buff_len; j++) {
+            //ToDo: clang-tidy is yelling at me that rand has limited randomness.
+            uint8_t x = (uint8_t)rand();
+            buffer[j] = cave_hash_uint8(x);
+        }
+        for(size_t j = 0; j < buff_len; j++) {
+            fprintf(out_file, "%" PRIu8 ",", buffer[j]);
         }
     }
+    fprintf(out_file, "\n");
 
-    printf("the bitcounts for cave_has_uint16_test() are:\n");
-    for(size_t i = 0; i < 16; i++) {
-        printf("%zu , ", bit_counts[i]);
-    }
-    printf("\n");
+    fclose(out_file);
+    free(out_file_name);
 
-    return CAVE_DATA_ERROR;
+    return CAVE_NO_ERROR;
 }
 
-CaveError cave_hash_uint32_test() {
-    size_t bit_counts[32] = {0};
+CaveError cave_hash_uint32_test(const char* rel_output_dir) {
+    size_t total_size = 10000000;
+    size_t buff_len = 100000;
+    //total_size and buff_len are liable to get fiddled with, so feels prudent to add this check
+    if(total_size % buff_len != 0) {return CAVE_INDEX_ERROR; }
+    //Just noting that this is a VLA, which there is some reason to be ambivalent about
+    uint8_t buffer[buff_len];
 
-    uint32_t x;
-    for(size_t i = 0; i < 20000000; i++) {
-        //ToDo: clang-tidy is yelling at me that rand has limited randomness.
-        x = (uint32_t)rand();
-        uint32_t hash = cave_hash_uint32(x);
+    char * out_file_name = cave_str_combine_unchecked(rel_output_dir, "/cave_hash_uint32_test.csv");
+    FILE* out_file = fopen(out_file_name, "w");
 
-
-        //for every bit in hash, increment the coresponding bit_count by 1.
-        for(size_t j = 0; j < 32; j++) {
-            uint32_t mask = 1 << j;
-            if ( (hash & mask) > 0 ) {
-                bit_counts[j] += 1;
-            }
+    for(size_t i = 0; i < total_size / buff_len; i++) {
+        for(size_t j = 0; j < buff_len; j++) {
+            //ToDo: clang-tidy is yelling at me that rand has limited randomness.
+            uint8_t x = (uint8_t)rand();
+            buffer[j] = cave_hash_uint8(x);
+        }
+        for(size_t j = 0; j < buff_len; j++) {
+            fprintf(out_file, "%" PRIu8 ",", buffer[j]);
         }
     }
+    fprintf(out_file, "\n");
 
-    printf("the bitcounts for cave_has_uint32_test() are:\n");
-    for(size_t i = 0; i < 32; i++) {
-        printf("%zu , ", bit_counts[i]);
-    }
-    printf("\n");
+    fclose(out_file);
+    free(out_file_name);
 
-    return CAVE_DATA_ERROR;
+    return CAVE_NO_ERROR;
 }
 
-CaveError cave_hash_uint64_test() {
-    size_t bit_counts[64] = {0};
+CaveError cave_hash_uint64_test(const char* rel_output_dir) {
+    size_t total_size = 10000000;
+    size_t buff_len = 100000;
+    //total_size and buff_len are liable to get fiddled with, so feels prudent to add this check
+    if(total_size % buff_len != 0) {return CAVE_INDEX_ERROR; }
+    //Just noting that this is a VLA, which there is some reason to be ambivalent about
+    uint8_t buffer[buff_len];
 
-    uint64_t x;
-    for(size_t i = 0; i < 20000000; i++) {
-        //ToDo: clang-tidy is yelling at me that rand has limited randomness.
-        //together these two lines initalize 64 random bits
-        x = (uint64_t)rand();
-        x = (x<<32) + (uint64_t)rand();
+    char * out_file_name = cave_str_combine_unchecked(rel_output_dir, "/cave_hash_uint64_test.csv");
+    FILE* out_file = fopen(out_file_name, "w");
 
-        uint64_t hash = cave_hash_uint64(x);
-
-
-        //for every bit in hash, increment the coresponding bit_count by 1.
-        for(size_t j = 0; j < 64; j++) {
-            uint64_t mask = 1 << j;
-            if ( (hash & mask) > 0 ) {
-                bit_counts[j] += 1;
-            }
+    for(size_t i = 0; i < total_size / buff_len; i++) {
+        for(size_t j = 0; j < buff_len; j++) {
+            //ToDo: clang-tidy is yelling at me that rand has limited randomness.
+            //!IMPORTANT! rand returns an int which (almost certainly) is never gonna be 64 bits
+            //together these two lines initalize 64 random bits
+            uint64_t x = (uint64_t)rand();
+            x = (x<<32) + (uint64_t)rand();
+            buffer[j] = cave_hash_uint8(x);
+        }
+        for(size_t j = 0; j < buff_len; j++) {
+            fprintf(out_file, "%" PRIu8 ",", buffer[j]);
         }
     }
+    fprintf(out_file, "\n");
 
-    printf("the bitcounts for cave_has_uint64_test() are:\n");
-    for(size_t i = 0; i < 64; i++) {
-        printf("%zu , ", bit_counts[i]);
-    }
-    printf("\n");
+    fclose(out_file);
+    free(out_file_name);
 
+    return CAVE_NO_ERROR;
+}
+
+CaveError cave_hash_bytes_test(const char* rel_output_dir) {
     return CAVE_DATA_ERROR;
 }
 
-CaveError cave_hash_bytes_test() {
-    return CAVE_DATA_ERROR;
-}
-
-CaveError cave_hash_str_test() {
+CaveError cave_hash_str_test(const char* rel_output_dir) {
     return CAVE_DATA_ERROR;
 }
 
@@ -1582,6 +1589,8 @@ int main(int argc, char* argv[]) {
 
 //initialize things the rest of the tests will use
 
+    char const * out_dir = "./";
+
     //time_t's are so annoying.
     srand(time(NULL));
 
@@ -1610,12 +1619,12 @@ int main(int argc, char* argv[]) {
 // ToDo: Multithread running tests?
 
 //Hash Tests
-//    RUN_TEST(cave_hash_uint8_test, test_fails);
-//    RUN_TEST(cave_hash_uint16_test, test_fails);
-//    RUN_TEST(cave_hash_uint32_test, test_fails);
-//    RUN_TEST(cave_hash_uint64_test, test_fails);
-//    RUN_TEST(cave_hash_bytes_test, test_fails);
-//    RUN_TEST(cave_hash_str_test, test_fails);
+   RUN_OUTPUT_TEST(cave_hash_uint8_test,  test_fails, out_dir);
+   RUN_OUTPUT_TEST(cave_hash_uint16_test, test_fails, out_dir);
+   RUN_OUTPUT_TEST(cave_hash_uint32_test, test_fails, out_dir);
+   RUN_OUTPUT_TEST(cave_hash_uint64_test, test_fails, out_dir);
+   RUN_OUTPUT_TEST(cave_hash_bytes_test,  test_fails, out_dir);
+   RUN_OUTPUT_TEST(cave_hash_str_test,    test_fails, out_dir);
 
 //HashMap Tests
     RUN_TEST(cave_hashmp_init_test, test_fails);

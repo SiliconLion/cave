@@ -15,6 +15,8 @@ extern "C" {
 
 long cave_file_len(FILE* file);
 
+char* cave_str_combine_unchecked(char const *restrict first, char const *restrict second);
+
 ///This is lowkey terrible and I'll try to come up with something better at some point.
 #define CAVE_PLATFORM_SWITCH(statement_64_bit, statement_32_bit) \
     if(CAVE_PLATFORM_64_BIT) {                                   \
