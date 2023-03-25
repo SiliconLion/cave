@@ -1082,6 +1082,36 @@ CaveError cave_vec_map_test() {
 //   ><<     ><< ><<       ><< ><<    ><< ><<     ><<
 //   ><<     ><<><<         ><<  ><< <<   ><<     ><<
 
+// the purpose of this test is to just gather some data on how good the `rand()` call is
+// so when doing statistical tests, like the following hash tests, we have a distribution to compare
+// to. 
+CaveError randomness_sanity_check(const char* rel_output_dir) {
+    size_t total_size = 10000000;
+    size_t buff_len = 100000;
+    //total_size and buff_len are liable to get fiddled with, so feels prudent to add this check
+    if(total_size % buff_len != 0) {return CAVE_INDEX_ERROR; }
+    //Just noting that this is a VLA, which there is some reason to be ambivalent about
+    int buffer[buff_len];
+
+    char * out_file_name = cave_str_combine_unchecked(rel_output_dir, "/randomness_sanity_check.csv");
+    FILE* out_file = fopen(out_file_name, "w");
+
+    for(size_t i = 0; i < total_size / buff_len; i++) {
+        for(size_t j = 0; j < buff_len; j++) {
+            buffer[j] = rand();
+        }
+        for(size_t j = 0; j < buff_len; j++) {
+            fprintf(out_file, "%i\n", buffer[j]);
+        }
+    }
+
+    fprintf(out_file, "\n");
+
+    fclose(out_file);
+    free(out_file_name);
+
+    return CAVE_NO_ERROR;
+}
 
 CaveError cave_hash_uint8_test(const char* rel_output_dir) {
     size_t total_size = 10000000;
@@ -1101,7 +1131,7 @@ CaveError cave_hash_uint8_test(const char* rel_output_dir) {
             buffer[j] = cave_hash_uint8(x);
         }
         for(size_t j = 0; j < buff_len; j++) {
-            fprintf(out_file, "%" PRIu8 ",", buffer[j]);
+            fprintf(out_file, "%" PRIu8 "\n", buffer[j]);
         }
     }
 
@@ -1119,7 +1149,7 @@ CaveError cave_hash_uint16_test(const char* rel_output_dir) {
     //total_size and buff_len are liable to get fiddled with, so feels prudent to add this check
     if(total_size % buff_len != 0) {return CAVE_INDEX_ERROR; }
     //Just noting that this is a VLA, which there is some reason to be ambivalent about
-    uint8_t buffer[buff_len];
+    uint16_t buffer[buff_len];
 
     char * out_file_name = cave_str_combine_unchecked(rel_output_dir, "/cave_hash_uint16_test.csv");
     FILE* out_file = fopen(out_file_name, "w");
@@ -1127,11 +1157,11 @@ CaveError cave_hash_uint16_test(const char* rel_output_dir) {
     for(size_t i = 0; i < total_size / buff_len; i++) {
         for(size_t j = 0; j < buff_len; j++) {
             //ToDo: clang-tidy is yelling at me that rand has limited randomness.
-            uint8_t x = (uint8_t)rand();
-            buffer[j] = cave_hash_uint8(x);
+            uint16_t x = (uint16_t)rand();
+            buffer[j] = cave_hash_uint16(x);
         }
         for(size_t j = 0; j < buff_len; j++) {
-            fprintf(out_file, "%" PRIu8 ",", buffer[j]);
+            fprintf(out_file, "%" PRIu16 "\n", buffer[j]);
         }
     }
     fprintf(out_file, "\n");
@@ -1148,7 +1178,7 @@ CaveError cave_hash_uint32_test(const char* rel_output_dir) {
     //total_size and buff_len are liable to get fiddled with, so feels prudent to add this check
     if(total_size % buff_len != 0) {return CAVE_INDEX_ERROR; }
     //Just noting that this is a VLA, which there is some reason to be ambivalent about
-    uint8_t buffer[buff_len];
+    uint32_t buffer[buff_len];
 
     char * out_file_name = cave_str_combine_unchecked(rel_output_dir, "/cave_hash_uint32_test.csv");
     FILE* out_file = fopen(out_file_name, "w");
@@ -1156,11 +1186,11 @@ CaveError cave_hash_uint32_test(const char* rel_output_dir) {
     for(size_t i = 0; i < total_size / buff_len; i++) {
         for(size_t j = 0; j < buff_len; j++) {
             //ToDo: clang-tidy is yelling at me that rand has limited randomness.
-            uint8_t x = (uint8_t)rand();
-            buffer[j] = cave_hash_uint8(x);
+            uint32_t x = (uint32_t)rand();
+            buffer[j] = cave_hash_uint32(x);
         }
         for(size_t j = 0; j < buff_len; j++) {
-            fprintf(out_file, "%" PRIu8 ",", buffer[j]);
+            fprintf(out_file, "%" PRIu32 "\n", buffer[j]);
         }
     }
     fprintf(out_file, "\n");
@@ -1177,7 +1207,7 @@ CaveError cave_hash_uint64_test(const char* rel_output_dir) {
     //total_size and buff_len are liable to get fiddled with, so feels prudent to add this check
     if(total_size % buff_len != 0) {return CAVE_INDEX_ERROR; }
     //Just noting that this is a VLA, which there is some reason to be ambivalent about
-    uint8_t buffer[buff_len];
+    uint64_t buffer[buff_len];
 
     char * out_file_name = cave_str_combine_unchecked(rel_output_dir, "/cave_hash_uint64_test.csv");
     FILE* out_file = fopen(out_file_name, "w");
@@ -1189,10 +1219,10 @@ CaveError cave_hash_uint64_test(const char* rel_output_dir) {
             //together these two lines initalize 64 random bits
             uint64_t x = (uint64_t)rand();
             x = (x<<32) + (uint64_t)rand();
-            buffer[j] = cave_hash_uint8(x);
+            buffer[j] = cave_hash_uint64(x);
         }
         for(size_t j = 0; j < buff_len; j++) {
-            fprintf(out_file, "%" PRIu8 ",", buffer[j]);
+            fprintf(out_file, "%" PRIu64 "\n", buffer[j]);
         }
     }
     fprintf(out_file, "\n");
@@ -1210,6 +1240,7 @@ CaveError cave_hash_bytes_test(const char* rel_output_dir) {
 CaveError cave_hash_str_test(const char* rel_output_dir) {
     return CAVE_DATA_ERROR;
 }
+
 
 
 
@@ -1258,22 +1289,6 @@ CaveError cave_hashmp_init_test() {
     }
     //TODO: test more edge cases, eg, 0's and NULL's
     return CAVE_NO_ERROR;
-}
-
-CaveError cave_hashmp_set_key_eq_fn_test() {
-    return CAVE_DATA_ERROR;
-}
-
-CaveError cave_hashmp_set_key_cpy_test() {
-    return CAVE_DATA_ERROR;
-}
-
-CaveError cave_hashmp_set_value_cpy_test() {
-    return CAVE_DATA_ERROR;
-}
-
-CaveError cave_hashmp_kv_destructor_test() {
-    return CAVE_DATA_ERROR;
 }
 
 CaveError cave_hashmp_insert_test() {
@@ -1589,6 +1604,8 @@ int main(int argc, char* argv[]) {
 
 //initialize things the rest of the tests will use
 
+    //may spend the effort to customize this more later, but feels like
+    //overkill atm.
     char const * out_dir = "./";
 
     //time_t's are so annoying.
@@ -1597,56 +1614,53 @@ int main(int argc, char* argv[]) {
     int test_fails = 0;
 
 //Vec Tests
-    RUN_TEST(cave_vec_init_test, test_fails);
-    RUN_TEST(cave_vec_reserve_test, test_fails);
-    RUN_TEST(cave_vec_shrink_test, test_fails);
-    RUN_TEST(cave_vec_push_test, test_fails);
-    RUN_TEST(cave_vec_at_test, test_fails);
-    RUN_TEST(cave_vec_add_at_unchecked_test, test_fails);
-    RUN_TEST(cave_vec_add_at_test, test_fails);
-    RUN_TEST(cave_vec_end_test, test_fails);
-    RUN_TEST(cave_vec_pop_test, test_fails);
-    RUN_TEST(cave_vec_remove_at_test, test_fails);
-    RUN_TEST(cave_vec_cpy_init_test, test_fails);
-    RUN_TEST(cave_vec_cpy_assign_test, test_fails);
-    RUN_TEST(cave_vec_clear_test, test_fails);
-    RUN_TEST(cave_vec_foreach_test, test_fails);
-    RUN_TEST(cave_vec_filter_test, test_fails);
-    RUN_TEST(cave_vec_map_test, test_fails);
+    RUN_TEST(cave_vec_init_test,                test_fails);
+    RUN_TEST(cave_vec_reserve_test,             test_fails);
+    RUN_TEST(cave_vec_shrink_test,              test_fails);
+    RUN_TEST(cave_vec_push_test,                test_fails);
+    RUN_TEST(cave_vec_at_test,                  test_fails);
+    RUN_TEST(cave_vec_add_at_unchecked_test,    test_fails);
+    RUN_TEST(cave_vec_add_at_test,              test_fails);
+    RUN_TEST(cave_vec_end_test,                 test_fails);
+    RUN_TEST(cave_vec_pop_test,                 test_fails);
+    RUN_TEST(cave_vec_remove_at_test,           test_fails);
+    RUN_TEST(cave_vec_cpy_init_test,            test_fails);
+    RUN_TEST(cave_vec_cpy_assign_test,          test_fails);
+    RUN_TEST(cave_vec_clear_test,               test_fails);
+    RUN_TEST(cave_vec_foreach_test,             test_fails);
+    RUN_TEST(cave_vec_filter_test,              test_fails);
+    RUN_TEST(cave_vec_map_test,                 test_fails);
 
 
 //just commented out while writing other tests cuz they take a long time. 
 // ToDo: Multithread running tests?
 
 //Hash Tests
-   RUN_OUTPUT_TEST(cave_hash_uint8_test,  test_fails, out_dir);
-   RUN_OUTPUT_TEST(cave_hash_uint16_test, test_fails, out_dir);
-   RUN_OUTPUT_TEST(cave_hash_uint32_test, test_fails, out_dir);
-   RUN_OUTPUT_TEST(cave_hash_uint64_test, test_fails, out_dir);
-   RUN_OUTPUT_TEST(cave_hash_bytes_test,  test_fails, out_dir);
-   RUN_OUTPUT_TEST(cave_hash_str_test,    test_fails, out_dir);
+    RUN_OUTPUT_TEST(randomness_sanity_check,    test_fails,  out_dir);
+    RUN_OUTPUT_TEST(cave_hash_uint8_test,       test_fails,  out_dir);
+    RUN_OUTPUT_TEST(cave_hash_uint16_test,      test_fails,  out_dir);
+    RUN_OUTPUT_TEST(cave_hash_uint32_test,      test_fails,  out_dir);
+    RUN_OUTPUT_TEST(cave_hash_uint64_test,      test_fails,  out_dir);
+    RUN_OUTPUT_TEST(cave_hash_bytes_test,       test_fails,  out_dir);
+    RUN_OUTPUT_TEST(cave_hash_str_test,         test_fails,  out_dir);
 
 //HashMap Tests
-    RUN_TEST(cave_hashmp_init_test, test_fails);
-    RUN_TEST(cave_hashmp_set_key_eq_fn_test, test_fails);
-    RUN_TEST(cave_hashmp_set_key_cpy_test, test_fails);
-    RUN_TEST(cave_hashmp_set_value_cpy_test, test_fails);
-    RUN_TEST(cave_hashmp_kv_destructor_test, test_fails);
-    RUN_TEST(cave_hashmp_insert_test, test_fails);
+    RUN_TEST(cave_hashmp_init_test,             test_fails);
+    RUN_TEST(cave_hashmp_insert_test,           test_fails);
     RUN_TEST(cave_hashmp_update_or_insert_test, test_fails);
-    RUN_TEST(cave_hashmp_at_test, test_fails);
-    RUN_TEST(cave_hashmp_remove_test, test_fails);
-    RUN_TEST(cave_hashmp_cpy_kv_into_test, test_fails);
-    RUN_TEST(cave_hashmp_move_kv_into_test, test_fails);
-    RUN_TEST(cave_hashmp_clear_test, test_fails);
-    RUN_TEST(cave_hashmp_cpy_collect_test, test_fails);
-    RUN_TEST(cave_hashmp_mv_collect_test, test_fails);
-    RUN_TEST(cave_hashmp_rehash_test, test_fails);
+    RUN_TEST(cave_hashmp_at_test,               test_fails);
+    RUN_TEST(cave_hashmp_remove_test,           test_fails);
+    RUN_TEST(cave_hashmp_cpy_kv_into_test,      test_fails);
+    RUN_TEST(cave_hashmp_move_kv_into_test,     test_fails);
+    RUN_TEST(cave_hashmp_clear_test,            test_fails);
+    RUN_TEST(cave_hashmp_cpy_collect_test,      test_fails);
+    RUN_TEST(cave_hashmp_mv_collect_test,       test_fails);
+    RUN_TEST(cave_hashmp_rehash_test,           test_fails);
     RUN_TEST(cave_hashmp_total_collisions_test, test_fails);
-    RUN_TEST(cave_hashmp_max_collisions_test, test_fails);
-    RUN_TEST(cave_hashmp_cpy_assign_test, test_fails);
-    RUN_TEST(cave_hashmp_cpy_init_test, test_fails);
-    RUN_TEST(cave_hashmp_foreach_test, test_fails);
+    RUN_TEST(cave_hashmp_max_collisions_test,   test_fails);
+    RUN_TEST(cave_hashmp_cpy_assign_test,       test_fails);
+    RUN_TEST(cave_hashmp_cpy_init_test,         test_fails);
+    RUN_TEST(cave_hashmp_foreach_test,          test_fails);
 
     return test_fails;
 }

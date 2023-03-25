@@ -472,20 +472,22 @@ size_t cave_hash_str(const char * bytes) {
     return cave_hash_bytes( (uint8_t*)bytes, strlen(bytes));
 }
 
+
+
 size_t cave_idx_hash_uint8(uint8_t const * key) {
-    return cave_hash_sizet( (size_t)*key);
+    return (size_t)cave_hash_uint8(*key);
 }
 size_t cave_idx_hash_uint16(uint16_t const * key) {
-    return cave_hash_sizet( (size_t)*key);
+    return (size_t)cave_hash_uint16(*key);
 }
 size_t cave_idx_hash_uint32(uint32_t const * key) {
-    return cave_hash_sizet( (size_t)*key);
+    return (size_t)cave_hash_uint32(*key);
 }
 size_t cave_idx_hash_uint64(uint64_t const * key) {
-    return cave_hash_sizet( (size_t)*key);
+    return (size_t)cave_hash_uint64(*key);
 }
 size_t cave_idx_hash_sizet(size_t const * key) {
-    return cave_hash_sizet( (size_t)*key);
+    return cave_hash_sizet(*key);
 }
 size_t cave_idx_hash_str(char const ** key) {
     return cave_hash_str(*key);
