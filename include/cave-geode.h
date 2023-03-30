@@ -37,8 +37,17 @@ CaveVec cave_kong_triangulate(CavePolygon* p, CaveError* err);
 
 CaveVec cave_toussaint_triangulate(CavePolygon* p, CaveError* err);
 
-
 bool cave_2d_tri_point_is_inside(cave_2d_Triangle* t, CaveError* err);
+
+/// returns `p1 + p2`
+cave_2Point cave_2point_add(cave_2Point p1, cave_2Point p2); 
+/// returns `p1 - p2`
+cave_2Point cave_2point_sub(cave_2Point p1, cave_2Point p2); 
+/// returns length of the vector starting at (0,0), pointing towards `p`
+float cave_2d_measure(cave_2Point p);
+
+/// Uses a variation Herron's formula to find the area of a triangle thats *supposed* to be extra stable
+float cave_2d_tri_area(cave_2d_Triangle* t, CaveError* err);
 
 
 
