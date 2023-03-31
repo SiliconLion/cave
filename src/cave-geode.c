@@ -115,15 +115,18 @@ float cave_2d_measure(cave_2Point p) {
     return sqrtf( (p.x * p.x) + (p.y * p.y) );
 }
 
-//if `*v1 > *v2`, then the values in `v1` and `v2` are swapped. Otherwise they are left as is
-void hidden_cave_cmp_swap(float* v1, float* v2) {
-    if(*v1 < *v2) {
+//if `*v1 < *v2`, then the values in `v1` and `v2` are swapped. Otherwise they are left as is.
+//if they are swapped, return true, otherwise return false.
+bool hidden_cave_cmp_swap(float* v1, float* v2) {
+    if(*v1 > *v2) {
         float temp = *v1;
         *v1 = *v2;
         *v2 = temp;
+        return true;
     }
-    return;
+    return false;
 }
+
 
 // algorithm according to https://people.eecs.berkeley.edu/~wkahan/Triangle.pdf 
 // via https://scicomp.stackexchange.com/a/27694/45293
@@ -132,11 +135,11 @@ float cave_2d_tri_area(cave_2d_Triangle* t, CaveError* err) {
     float side_2 = cave_2d_measure( cave_2point_sub(t->b, t->c) );
     float side_3 = cave_2d_measure( cave_2point_sub(t->c, t->a) );
 
-//these are just the side lengths we computed, but ordered s.t. a <= b <= c 
+//these are just the side lengths we computed, but ordered s.t. a >= b >= c 
     float a = side_1, b = side_2, c = side_3;
-    hidden_cave_cmp_swap(&a, &b); // now a < b
-    hidden_cave_cmp_swap(&a, &c); // now a < c
-    hidden_cave_cmp_swap(&b, &c); // now b < c
+    hidden_cave_cmp_swap(&a, &b); // now a > b
+    hidden_cave_cmp_swap(&a, &c); // now a > c
+    hidden_cave_cmp_swap(&b, &c); // now b > c
     
 
     return 0.25 * sqrtf(
@@ -144,7 +147,36 @@ float cave_2d_tri_area(cave_2d_Triangle* t, CaveError* err) {
         (c - (a - b)) *
         (c + (a - b)) *
         (a + (b - c))
-    )
+    );
 }
 
+// algorithm according to https://people.eecs.berkeley.edu/~wkahan/Triangle.pdf 
+// also via https://scicomp.stackexchange.com/a/27694/45293
+float cave_2d_internal_angle(cave_2Point p1, cave_2Point p2, cave_2Point p3, CaveError* err) {
+    float side_1 = cave_2d_measure( cave_2point_sub(p2, p1) );
+    float side_2 = cave_2d_measure( cave_2point_sub(p2, p3) );
+    float side_3 = cave_2d_measure( cave_2point_sub(p3, p1) );
 
+//these are just the side lengths we computed, but ordered s.t. a >= b >= c 
+    float a = side_1, b = side_2, c = side_3;
+    hidden_cave_cmp_swap(&a, &b); // now a > b
+
+    float mu; 
+    if(b >= c && c >= 0) {
+        mu = c - (a - b);
+    } else if( c > b && b >= 0) {
+        mu = b - (a - c);
+    } else { 
+        // ∆p1p2p3 is not a valid triangle, aka, we cant compute this angle. 
+        *err = CAVE_DATA_ERROR;
+        return NAN;
+    }
+    
+
+    float numerator = ((a - b) + c) * mu;
+    float denominator = (a + (b + c)) * ((a - c) + b);
+
+    return 2.0 * atan(
+        sqrt(numerator / denominator)
+    );
+}

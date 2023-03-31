@@ -47,7 +47,10 @@ cave_2Point cave_2point_sub(cave_2Point p1, cave_2Point p2);
 float cave_2d_measure(cave_2Point p);
 
 /// Uses a variation Herron's formula to find the area of a triangle thats *supposed* to be extra stable
+/// according to https://people.eecs.berkeley.edu/~wkahan/Triangle.pdf 
 float cave_2d_tri_area(cave_2d_Triangle* t, CaveError* err);
+/// Calculates the angle p1p2p3 in rad, using the method described in https://people.eecs.berkeley.edu/~wkahan/Triangle.pdf
+float cave_2d_internal_angle(cave_2Point p1, cave_2Point p2, cave_2Point p3, CaveError* err)
 
 
 
