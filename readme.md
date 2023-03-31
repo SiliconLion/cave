@@ -31,8 +31,7 @@ Cave into. Then copy `build/src/libCAVE.a` to somewhere the linker for your proj
 can see it. That should be all you need to get Cave to work in your project.
 
 ### For use on Windows 
-I currently don't have a Windows machine to test building on, but it should be 
-basic CMake and very similar to the Unix instructions
+Some unix only stuff has snuck into this project, but sooner than later I will make sure it works on windows.
 
 ## Tests
 Testing right now is also less smooth than ideal, but not so bad really.

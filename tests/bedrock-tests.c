@@ -1448,7 +1448,48 @@ CaveError cave_hashmp_at_test() {
 }
 
 CaveError cave_hashmp_remove_test() {
-    return CAVE_DATA_ERROR;
+    CaveError err = CAVE_NO_ERROR;
+
+    CaveHashMap h1;
+    cave_hashmp_init(
+        &h1, 
+        sizeof(size_t),
+        sizeof(size_t),
+        100000,
+        (CAVE_HASH_FN)cave_idx_hash_sizet,
+        &err
+    );
+    if(err != CAVE_NO_ERROR) {return err;}
+
+    for(size_t i = 0; i < 100000; i++) {
+        cave_hashmp_insert(&h1, &i, &i, &err);
+        if(err != CAVE_NO_ERROR) {return err;}
+    }
+
+    for(size_t i = 0; i < 100000; i++) {
+        CaveHashMap* ret = cave_hashmap_remove(&h1, &i, &err);
+        if(err != CAVE_NO_ERROR) {return err;}
+        if(ret != &h1) { return CAVE_DATA_ERROR;}
+        if(h1.count != 100000 - (i + 1) ) {return CAVE_COUNT_ERROR;}
+    }
+
+    CaveVec elements;
+    cave_vec_init(&elements, sizeof(CaveKeyValue), 0, &err);
+    for(size_t i = 0; i < h1.buckets.len; i++) {
+        CaveVec* bucket = cave_vec_at_unchecked(&h1.buckets, i);
+        for(size_t j = 0; j < bucket->len; j++) {
+            cave_vec_push(
+                &elements, cave_vec_at_unchecked(bucket, j), &err
+            );
+            if(err != CAVE_NO_ERROR) {return err;}
+        }
+    }
+
+    if(elements.len != 0) {return CAVE_DATA_ERROR;}
+
+    return CAVE_NO_ERROR;
+
+    //TODO: test with more complex datatype. the above doesnt trigger any destructors 
 }
 
 CaveError cave_hashmp_cpy_kv_into_test() {

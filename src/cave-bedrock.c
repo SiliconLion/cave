@@ -847,6 +847,7 @@ CaveHashMap* cave_hashmap_remove(CaveHashMap* h, void const * key, CaveError* er
     CaveKeyValue* kv = malloc(sizeof(CaveKeyValue));
     cave_vec_remove_at(bucket, kv, kv_index, err); //dont need to check error
     hidden_cave_destuct_kv(h, kv);
+    h->count -= 1;
     *err = CAVE_NO_ERROR;
     return h;
 }
