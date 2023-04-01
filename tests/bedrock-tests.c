@@ -1234,7 +1234,49 @@ CaveError cave_hash_uint64_test(const char* rel_output_dir) {
 }
 
 CaveError cave_hash_bytes_test(const char* rel_output_dir) {
-    return CAVE_DATA_ERROR;
+    size_t total_size = 10000000;
+    size_t buff_len = 100000;
+    //total_size and buff_len are liable to get fiddled with, so feels prudent to add this check
+    if(total_size % buff_len != 0) {return CAVE_INDEX_ERROR; }
+    //Just noting that this is a VLA, which there is some reason to be ambivalent about
+    size_t buffer[buff_len];
+
+
+    size_t byte_buffer_len = 1024;
+    if(byte_buffer_len % sizeof(int) != 0) {return CAVE_INDEX_ERROR;}
+
+    //also VLA
+    uint8_t byte_buffer[1024] = {0};
+
+
+    char * out_file_name = cave_str_combine_unchecked(rel_output_dir, "/cave_hash_uint64_test.csv");
+    FILE* out_file = fopen(out_file_name, "w");
+
+
+
+    for(size_t i = 0; i < total_size / buff_len; i++) {
+        for(size_t j = 0; j < buff_len; j++) {
+
+            //just filling the whole buffer with random bytes every time. easier than doing it based on number
+            //of bytes cuz of dealing with remainder. Whatever. Its fine. Might be a little sick of writing tests.
+            for(size_t r = 0; r < byte_buffer_len / sizeof(int); r++) {
+                ((int*)byte_buffer)[r] = rand();
+            }
+
+            size_t num_of_bytes = (size_t) (rand() % 1024);
+            buffer[j] = cave_hash_bytes(byte_buffer, num_of_bytes);
+        }
+        for(size_t j = 0; j < buff_len; j++) {
+            fprintf(out_file, "%zu\n", buffer[j]);
+        }
+    }
+
+    fprintf(out_file, "\n");
+
+    fclose(out_file);
+    free(out_file_name);
+
+    return CAVE_NO_ERROR;
 }
 
 CaveError cave_hash_str_test(const char* rel_output_dir) {
@@ -1501,7 +1543,40 @@ CaveError cave_hashmp_move_kv_into_test() {
 }
 
 CaveError cave_hashmp_clear_test() {
-    return CAVE_DATA_ERROR;
+    CaveError err = CAVE_NO_ERROR;
+
+    CaveHashMap h1;
+    cave_hashmp_init(&h1,
+        sizeof(size_t),
+        sizeof(size_t),
+        10000,
+        (CAVE_HASH_FN)cave_idx_hash_sizet, 
+        &err
+    );
+
+    //should be enough to generate plenty of collisions 
+    for(size_t i = 0; i < 50000; i++) {
+        cave_hashmp_insert(&h1, &i, &i, &err);
+        if(err != CAVE_NO_ERROR) {return err;}
+    }
+
+    size_t h1_capac = h1.capacity;
+    size_t h1_bucs_len = h1.buckets.len;
+
+    cave_hashmp_clear(&h1);
+    if(h1.count != 0) { return CAVE_COUNT_ERROR;}
+    //clear shouldn't modify the capacity of h1.
+    if(h1.buckets.len != h1_bucs_len) { return CAVE_COUNT_ERROR;} 
+    if(h1.capacity != h1_capac) {return CAVE_COUNT_ERROR;}
+
+    for(size_t i = 0; i < h1.buckets.len; i++) {
+        CaveVec* bucket = cave_vec_at_unchecked(&h1.buckets, i);
+        if(bucket->len != 0) {return CAVE_COUNT_ERROR;}
+    } 
+
+    return CAVE_NO_ERROR;
+
+    //TODO: Test type with custom destructor
 }
 
 CaveError cave_hashmp_cpy_collect_test() {

@@ -898,7 +898,7 @@ CaveKeyValue* cave_hashmp_move_kv_into(CaveKeyValue* dest, CaveHashMap* h, void 
 }
 
 
-CaveHashMap* cave_hashmp_clear(CaveHashMap* h) {
+void cave_hashmp_clear(CaveHashMap* h) {
     CaveError err = CAVE_NO_ERROR;
     for(size_t i = 0; i < h->buckets.len; i++) {
         CaveVec* bucket = cave_vec_at_unchecked(&h->buckets, i);
@@ -912,7 +912,6 @@ CaveHashMap* cave_hashmp_clear(CaveHashMap* h) {
         cave_vec_clear(bucket, &err);
     }
     h->count = 0;
-    return h;
 }
 
 CaveVec cave_hashmp_cpy_collect(CaveHashMap * h, CaveError* err) {

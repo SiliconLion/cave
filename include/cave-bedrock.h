@@ -566,7 +566,7 @@ CaveKeyValue* cave_hashmp_cpy_kv_into(CaveKeyValue* dest, CaveHashMap * h, void 
 CaveKeyValue* cave_hashmp_move_kv_into(CaveKeyValue* dest, CaveHashMap* h, void const * key, CaveError* err);
 
 /// \brief Calls `cave_hashmp_remove` on every element in `h`.
-CaveHashMap* cave_hashmp_clear(CaveHashMap* h);
+void cave_hashmp_clear(CaveHashMap* h);
 
 /// \brief Returns a `CaveVec` with type `CaveKeyValue` that has a copy of every key-value pair in `h`.
 ///
