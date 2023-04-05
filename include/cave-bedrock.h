@@ -24,6 +24,11 @@
 /// trying to write a value to NULL.
 
 
+typedef struct CaveBounds {
+    size_t start;
+    size_t end; //inclusive
+} CaveBounds;
+
 
 /// The factor by which a vector's allocation will be grown every time it's grown.
 #define CAVE_VEC_GROW_FACTOR (2)
@@ -355,6 +360,10 @@ CaveVec* cave_vec_filter(CaveVec* v, CAVE_FILTER_CLOSURE, void* closure_data, Ca
 /// \return `v` on success, NULL if an error is encountered.
 CaveVec* cave_vec_map(CaveVec* dest, CaveVec const * src, size_t output_stride, CAVE_MAP_CLOSURE fn, void* closure_data, CaveError* err);
 
+/// \brief If `a < b`, returns true, else returns false.
+typedef bool (*CAVE_CMPSN_FN)(void* a, void* b); 
+
+CaveVec* cave_vec_quicksort(CaveVec* v, CAVE_CMPSN_FN compare, CaveError* err);
 
 
 /*

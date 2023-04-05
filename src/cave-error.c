@@ -17,6 +17,9 @@ const char* cave_error_string(CaveError e) {
         case CAVE_COUNT_ERROR: {
             return "CAVE_COUNT_ERROR";
         }
+        case CAVE_ORDER_ERROR: {
+            return "CAVE_ORDER_ERROR";
+        }
         case CAVE_MISSING_KEY_ERROR: {
             return "CAVE_MISSING_KEY_ERROR";
         }
