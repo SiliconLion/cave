@@ -487,21 +487,18 @@ CaveError cave_vec_pop_test() {
 
     size_t v1_capacity = v1.capacity;
 
-    long counter = (long)v1.len - 1;
-    while(v1.len > 0) {
+    for(long i = 10000; i --> 0;) {
         ret = cave_vec_pop(&v1, &element, &err);
         correct =
                 err == CAVE_NO_ERROR &&
-                element == v1.len - 1 &&
+                element == i &&
+                v1.len == i &&
                 ret == &element &&
-                v1.capacity == v1_capacity &&
-                element == counter;
-        counter -= 1;
+                v1.capacity == v1_capacity;
+        if(!correct) { return CAVE_DATA_ERROR;}
     }
 
-    for(long i = 0; i < 10000; i++) {
-        cave_vec_push(&v1, &i, &err);
-    }
+
 
 //testing pop with null second argument
     while(v1.len > 0) {
@@ -530,10 +527,7 @@ CaveError cave_vec_pop_test() {
     if(!correct) {return CAVE_DATA_ERROR;}
 
     cave_vec_release(&v1);
-
-    return CAVE_UNKNOWN_ERROR;
-
-//    return CAVE_NO_ERROR;
+    return CAVE_NO_ERROR;
 }
 
 CaveError cave_vec_remove_at_test() {
@@ -1085,31 +1079,17 @@ bool cmp_int_lth(int* a, int* b) {
 
 CaveError cave_vec_quicksort_test() {
     CaveError err = CAVE_NO_ERROR;
-
-
-    //debug
-    size_t v1_element_count = 6;
-//    int elements[6] = {5,4,3,2,1,0};
-    int elements[6] = {0,1,2,3,4,5};
-
-//    size_t v1_element_count = 2000;
+    size_t v1_element_count = 2000;
 
     CaveVec v1;
     cave_vec_init(&v1, sizeof(int), v1_element_count, &err);
     if(err != CAVE_NO_ERROR) {return err;}
 
-//    for(size_t i = 0; i < v1_element_count; i++) {
-//        int r = rand();
-//        cave_vec_push(&v1, &r, &err);
-//        if(err != CAVE_NO_ERROR) {return err;}
-//    }
-
-//debug
     for(size_t i = 0; i < v1_element_count; i++) {
-        cave_vec_push(&v1, elements + i, &err);
+        int r = rand();
+        cave_vec_push(&v1, &r, &err);
         if(err != CAVE_NO_ERROR) {return err;}
     }
-
 
 
     CaveVec* ret = cave_vec_quicksort(&v1, (CAVE_CMPSN_FN)&cmp_int_lth, &err);
@@ -1121,17 +1101,7 @@ CaveError cave_vec_quicksort_test() {
         int* a = cave_vec_at_unchecked(&v1, i);
         int* b = cave_vec_at_unchecked(&v1, i + 1);
 
-//        if( !(cmp_int_lth(a, b)) ) {return CAVE_ORDER_ERROR;}
-        ordered_correctly &= cmp_int_lth(a, b);
-    }
-
-    if(!ordered_correctly) {
-        printf("Quicksortted vec elements: ");
-        for(size_t i = 0; i < v1_element_count; i++) {
-            printf("%i ,", *(int*)cave_vec_at_unchecked(&v1, i));
-        }
-        printf("\n");
-        return CAVE_ORDER_ERROR;
+        if( !(cmp_int_lth(a, b)) ) {return CAVE_ORDER_ERROR;}
     }
 
     return CAVE_NO_ERROR;

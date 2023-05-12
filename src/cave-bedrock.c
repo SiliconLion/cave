@@ -175,7 +175,6 @@ void* cave_vec_pop(CaveVec* v, void* dest, CaveError* err) {
 
     if(dest != NULL) {
         memcpy(dest, v->data + ( (v->len - 1) * v->stride), v->stride);
-//        memcpy(dest, v->data + v->len, v->stride);
     }
     v->len -= 1;
     *err = CAVE_NO_ERROR;
@@ -386,16 +385,9 @@ void hidden_cave_quicksort_partition(
     CaveError* err
 ) {
     size_t elem_count = slice_end - slice_start + 1;
-    //Debug
-    for(size_t i = slice_start; i <= slice_end; i++) {
-        printf("%i ,", *(int*)cave_vec_at_unchecked(v, i));
-    }
-    printf("  -->  ");
 
     //slice_start and slice_end should never equal eachother so there should never be elem_count == 0
     if(elem_count == 1) {
-        //debug
-        printf("%i, ", *(int*)cave_vec_at_unchecked(v, slice_start));
         *out_new_pivot = slice_start;
         return;
     } //trivially sorted
@@ -408,8 +400,6 @@ void hidden_cave_quicksort_partition(
             //way or another
         }
         *out_new_pivot = slice_start;
-        //debug
-        printf("%i, %i", *(int*)cave_vec_at_unchecked(v, slice_start), *(int*)cave_vec_at_unchecked(v, slice_end));
         return;
     }
 
@@ -424,22 +414,16 @@ void hidden_cave_quicksort_partition(
 
     void* left = cave_vec_at_unchecked(v, left_idx);
     void* right = cave_vec_at_unchecked(v, right_idx);
-
-    int debug_pivot = *(int*)pivot;
-    int debug_left = *(int*)left;
-    int debug_right = *(int*)right;
     
     while(1) {
         while(left_idx < slice_end && compare(left, pivot)) {
             left_idx += 1; 
             left = cave_vec_at_unchecked(v, left_idx);
-            debug_left = *(int*)left;
         }
 
         while(right_idx > left_idx && !compare(right, pivot)) {
             right_idx -= 1; 
             right = cave_vec_at_unchecked(v, right_idx);
-            debug_right = *(int*)right;
         }
 
         if(left_idx >= right_idx) {
@@ -455,11 +439,6 @@ void hidden_cave_quicksort_partition(
     cave_vec_swap(v, slice_end, left_idx, err);
     *out_new_pivot = left_idx;
 
-    //Debug
-    for(size_t i = slice_start; i <= slice_end; i++) {
-        printf("%i ,", *(int*)cave_vec_at_unchecked(v, i));
-    }
-//    printf("\n");
     return;
 }
 
@@ -483,8 +462,6 @@ CaveVec* cave_vec_quicksort(CaveVec* v, CAVE_CMPSN_FN compare, CaveError* err) {
     while(partitions.len > 0) {
         CaveBounds slice = {0, 0};
         cave_vec_pop(&partitions, &slice, err);
-
-//        CaveBounds* debugSlice = cave_vec_at_unchecked(&partitions, partitions.len - 1);
         //dont need to check error as &slice != NULL, and partitions.len > 0
 
         size_t new_pivot;
@@ -497,31 +474,17 @@ CaveVec* cave_vec_quicksort(CaveVec* v, CAVE_CMPSN_FN compare, CaveError* err) {
         );
         if(*err != CAVE_NO_ERROR) {goto FAIL;}
 
-        //debug
-        printf("  ||  ");
-
         if(new_pivot != slice.start && new_pivot - 1 != slice.start) {
             CaveBounds leftSlice = {.start = slice.start, .end = new_pivot - 1};
             cave_vec_push(&partitions, &leftSlice, err);
-            if(*err != CAVE_NO_ERROR) {goto FAIL;}
-            //debug
-            printf("Left slice: {start: %zu, end: %zu}, ", leftSlice.start, leftSlice.end);
-        } else {
-            printf("Left slice: {}, ");
+            if (*err != CAVE_NO_ERROR) { goto FAIL; }
         }
 
         if(new_pivot != slice.end && new_pivot + 1 != slice.end) {
             CaveBounds rightSlice = {.start = new_pivot + 1, .end = slice.end};
             cave_vec_push(&partitions, &rightSlice, err);
             if(*err != CAVE_NO_ERROR) {goto FAIL;}
-            //debug
-            printf("Right slice: {start: %zu, end: %zu} ", rightSlice.start, rightSlice.end);
-        } else {
-            printf("Right slice: {} ");
         }
-
-        //debug
-        printf("\n");
     }
 
     return v;
